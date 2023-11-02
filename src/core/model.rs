@@ -58,7 +58,11 @@ impl Model {
 
                 // Process each batch
                 for (input_data, target_data) in input_batch.iter().zip(target_batch.iter()) {
-                    let prediction = self.evaluate(input_data);
+                    let mut prediction = self.evaluate(input_data);
+
+                    if prediction.len() == 1 { // Binary classification
+                        prediction = prediction.map(|x| if x > 0.5 {1.0} else {0.0})
+                    }
 
                     batch_loss += (self.loss)(target_data, &prediction);
 
