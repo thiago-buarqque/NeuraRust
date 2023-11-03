@@ -83,48 +83,34 @@ impl Layer {
             .last_raw_output
             .map(|x| (self.activation_derivative)(x));
 
-        if last_layer {
-            let delta = activation_derivative
+        let delta = if last_layer {
+            activation_derivative
                 .component_mul(&next_layer_delta)
-                .transpose();
+                .transpose()
+        } else {
+            let next_layer_weighted_error = next_layer_weights * next_layer_delta;
 
-            if self.errors.is_empty() {
-                self.errors = &delta * previous_layer_output;
-            } else {
-                self.errors += &delta * previous_layer_output;
-            }
-
-            if self.deltas.is_empty() {
-                self.deltas = delta.clone();
-            } else {
-                self.deltas += delta.clone();
-            }
-
-            return delta;
-        }
-
-        let next_layer_weighted_error = next_layer_weights * next_layer_delta;
-
-        let layer_delta = activation_derivative
-            .transpose()
-            .component_mul(&next_layer_weighted_error);
+            activation_derivative
+                .transpose()
+                .component_mul(&next_layer_weighted_error)
+        };
 
         if self.errors.is_empty() {
-            self.errors = &layer_delta * previous_layer_output;
+            self.errors = &delta * previous_layer_output;
         } else {
-            self.errors += &layer_delta * previous_layer_output;
+            self.errors += &delta * previous_layer_output;
         }
 
         if self.deltas.is_empty() {
-            self.deltas = layer_delta.clone();
+            self.deltas = delta.clone();
         } else {
-            self.deltas += layer_delta.clone();
+            self.deltas += delta.clone();
         }
 
-        layer_delta.clone()
+        delta
     }
 
-    pub fn clear_error_and_delta(&mut self) {
+    fn clear_error_and_delta(&mut self) {
         self.errors = DMatrix::zeros(0, 0);
         self.deltas = DMatrix::zeros(0, 0);
     }
@@ -143,6 +129,8 @@ impl Layer {
         transposed_delta.scale_mut(learning_rate);
 
         self.biases -= transposed_delta;
+
+        self.clear_error_and_delta()
     }
 
     pub fn get_last_output(&self) -> DMatrix<f64> {

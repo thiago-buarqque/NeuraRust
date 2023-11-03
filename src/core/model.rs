@@ -45,18 +45,12 @@ impl Model {
         for epoch in 0..epochs {
             Self::shuffle_dataset(&mut x, &mut y);
 
-            // Create batches
             let batches = x.chunks(batch_size).zip(y.chunks(batch_size));
 
             let mut epoch_loss = 0_f64;
             for (input_batch, target_batch) in batches {
-                self.layers
-                    .iter_mut()
-                    .for_each(|layer| layer.clear_error_and_delta());
-
                 let mut batch_loss = 0_f64;
 
-                // Process each batch
                 for (input_data, target_data) in input_batch.iter().zip(target_batch.iter()) {
                     let mut prediction = self.evaluate(input_data);
 
@@ -69,16 +63,13 @@ impl Model {
                     self.backpropagation(target_data, input_data, &prediction);
                 }
 
-                // Update parameters based on batch
                 self.layers
                     .iter_mut()
                     .for_each(|layer| layer.update_params(learning_rate, input_batch.len()));
 
-                // Average loss for the batch
                 epoch_loss += batch_loss / input_batch.len() as f64;
             }
 
-            // Report epoch loss
             println!(
                 "({}) Loss: {}",
                 epoch,
@@ -93,7 +84,6 @@ impl Model {
         network_input: &DMatrix<f64>,
         predicted: &DMatrix<f64>,
     ) {
-        // TODO Initalize empty
         let mut next_layer_delta = (self.loss_derivative)(&expected, &predicted);
 
         for i in (0..self.layers.len()).rev() {
@@ -106,7 +96,7 @@ impl Model {
             let last_layer = i == self.layers.len() - 1;
 
             let next_layer_weights = if last_layer {
-                network_input.clone() // Could be empty, it won't be used anyway
+                DMatrix::zeros(0, 0)
             } else {
                 self.layers[i + 1].get_weights()
             };
