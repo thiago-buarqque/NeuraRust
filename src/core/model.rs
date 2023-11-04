@@ -1,6 +1,8 @@
 use nalgebra::DMatrix;
 use rand::{thread_rng, Rng};
 
+use crate::optimizers::optimizer::Optimizer;
+
 use super::layer::Layer;
 
 pub struct Model {
@@ -36,11 +38,16 @@ impl Model {
         batch_size: usize,
         epochs: usize,
         learning_rate: f64,
+        optimizer: &mut dyn Optimizer,
         x: Vec<DMatrix<f64>>,
         y: Vec<DMatrix<f64>>,
     ) {
         let mut x = x.clone();
         let mut y = y.clone();
+
+        self.layers
+            .iter_mut()
+            .for_each(|layer| optimizer.initialize_layer_additional_params(layer));
 
         for epoch in 0..epochs {
             Self::shuffle_dataset(&mut x, &mut y);
@@ -54,26 +61,30 @@ impl Model {
                 for (input_data, target_data) in input_batch.iter().zip(target_batch.iter()) {
                     let mut prediction = self.evaluate(input_data);
 
-                    if prediction.len() == 1 { // Binary classification
-                        prediction = prediction.map(|x| if x > 0.5 {1.0} else {0.0})
+                    if prediction.len() == 1 {
+                        // Binary classification
+                        prediction = prediction.map(|x| if x > 0.5 { 1.0 } else { 0.0 })
                     }
 
                     batch_loss += (self.loss)(target_data, &prediction);
 
+                    // println!("Expected: {} Predicted: {} Loss: {}", target_data[0], prediction[0], batch_loss);
+
                     self.backpropagation(target_data, input_data, &prediction);
                 }
 
-                self.layers
-                    .iter_mut()
-                    .for_each(|layer| layer.update_params(learning_rate, input_batch.len()));
+                self.layers.iter_mut().for_each(|layer| {
+                    optimizer.update_params(input_batch.len(), layer, learning_rate)
+                });
 
                 epoch_loss += batch_loss / input_batch.len() as f64;
             }
 
             println!(
-                "({}) Loss: {}",
+                "({}) Loss: {} Batch loss: {}",
                 epoch,
-                epoch_loss / (x.len() as f64 / batch_size as f64)
+                epoch_loss / (x.len() as f64 / batch_size as f64),
+                epoch_loss
             );
         }
     }

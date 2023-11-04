@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rand::Rng;
 
 use nalgebra::DMatrix;
@@ -10,6 +12,7 @@ pub struct Layer {
     errors: DMatrix<f64>,
     last_activated_output: DMatrix<f64>,
     last_raw_output: DMatrix<f64>,
+    optimizer_params: HashMap<String, DMatrix<f64>>,
     weights: DMatrix<f64>,
 }
 
@@ -36,6 +39,7 @@ impl Layer {
             errors: DMatrix::zeros(0, 0),
             last_activated_output: DMatrix::identity(1, 1),
             last_raw_output: DMatrix::identity(1, 1),
+            optimizer_params: HashMap::new(),
             weights: DMatrix::from_row_slice(input_dim, neurons, &weights),
         }
     }
@@ -54,6 +58,7 @@ impl Layer {
             errors: DMatrix::zeros(0, 0),
             last_activated_output: DMatrix::identity(1, 1),
             last_raw_output: DMatrix::identity(1, 1),
+            optimizer_params: HashMap::new(),
             weights,
         }
     }
@@ -96,15 +101,15 @@ impl Layer {
         };
 
         if self.errors.is_empty() {
-            self.errors = &delta * previous_layer_output;
+            self.errors = (&delta * previous_layer_output).transpose();
         } else {
-            self.errors += &delta * previous_layer_output;
+            self.errors += (&delta * previous_layer_output).transpose();
         }
 
         if self.deltas.is_empty() {
-            self.deltas = delta.clone();
+            self.deltas = delta.clone().transpose();
         } else {
-            self.deltas += delta.clone();
+            self.deltas += delta.clone().transpose();
         }
 
         delta
@@ -115,33 +120,61 @@ impl Layer {
         self.deltas = DMatrix::zeros(0, 0);
     }
 
-    pub fn update_params(&mut self, learning_rate: f64, batch_size: usize) {
-        let mut transposed_error = self.errors.transpose();
+    // pub fn update_params(&mut self, learning_rate: f64, batch_size: usize) {
+    //     let mut transposed_error = self.errors.transpose();
 
-        transposed_error /= batch_size as f64;
-        transposed_error.scale_mut(learning_rate);
+    //     transposed_error /= batch_size as f64;
+    //     transposed_error.scale_mut(learning_rate);
 
-        self.weights -= transposed_error;
+    //     self.weights -= transposed_error;
 
-        let mut transposed_delta = self.deltas.transpose();
+    //     let mut transposed_delta = self.deltas.transpose();
 
-        transposed_delta /= batch_size as f64;
-        transposed_delta.scale_mut(learning_rate);
+    //     transposed_delta /= batch_size as f64;
+    //     transposed_delta.scale_mut(learning_rate);
 
-        self.biases -= transposed_delta;
+    //     self.biases -= transposed_delta;
 
-        self.clear_error_and_delta()
+    //     self.clear_error_and_delta()
+    // }
+
+    pub fn get_optimizer_params(&mut self) -> &mut HashMap<String, DMatrix<f64>> {
+        &mut self.optimizer_params
     }
 
     pub fn get_last_output(&self) -> DMatrix<f64> {
         self.last_activated_output.clone()
     }
 
+    pub fn get_biases(&self) -> DMatrix<f64> {
+        self.biases.clone()
+    }
+
+    pub fn get_deltas_clone(&self) -> DMatrix<f64> {
+        self.deltas.clone()
+    }
+
+    pub fn get_errors_clone(&self) -> DMatrix<f64> {
+        self.errors.clone()
+    }
+
+    pub fn get_biases_reference(&mut self) -> &mut DMatrix<f64> {
+        &mut self.biases
+    }
+
+    pub fn get_weights_reference(&mut self) -> &mut DMatrix<f64> {
+        &mut self.weights
+    }
+
     pub fn get_weights(&self) -> DMatrix<f64> {
         self.weights.clone()
     }
 
-    pub fn shape(&self) -> (usize, usize) {
-        self.weights.shape()
+    pub fn get_input_dim(&self) -> usize {
+        self.weights.shape().0
+    }
+
+    pub fn get_output_dim(&self) -> usize {
+        self.weights.shape().1
     }
 }
