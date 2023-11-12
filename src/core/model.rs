@@ -1,7 +1,10 @@
+use std::fmt::Write;
+
+use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use nalgebra::DMatrix;
 use rand::{thread_rng, Rng};
 
-use crate::optimizers::optimizer::Optimizer;
+use crate::{functions::metrics::print_metrics, optimizers::optimizer::Optimizer};
 
 use super::layer::Layer;
 
@@ -38,6 +41,7 @@ impl Model {
         batch_size: usize,
         epochs: usize,
         learning_rate: f64,
+        metrics: Vec<String>,
         optimizer: &mut dyn Optimizer,
         x: Vec<DMatrix<f64>>,
         y: Vec<DMatrix<f64>>,
@@ -54,8 +58,19 @@ impl Model {
 
             let batches = x.chunks(batch_size).zip(y.chunks(batch_size));
 
+            let mut epoch_predictions = Vec::with_capacity(x.len());
             let mut epoch_loss = 0_f64;
+
+            let progress_bar = ProgressBar::new(batches.len() as u64);
+
+            progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                .unwrap()
+                .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+                .progress_chars("#>-"));
+
             for (input_batch, target_batch) in batches {
+                progress_bar.inc(1);
+
                 let mut batch_loss = 0_f64;
 
                 for (input_data, target_data) in input_batch.iter().zip(target_batch.iter()) {
@@ -68,9 +83,9 @@ impl Model {
 
                     batch_loss += (self.loss)(target_data, &prediction);
 
-                    // println!("Expected: {} Predicted: {} Loss: {}", target_data[0], prediction[0], batch_loss);
-
                     self.backpropagation(target_data, input_data, &prediction);
+
+                    epoch_predictions.push(prediction);
                 }
 
                 self.layers.iter_mut().for_each(|layer| {
@@ -80,12 +95,16 @@ impl Model {
                 epoch_loss += batch_loss / input_batch.len() as f64;
             }
 
-            println!(
-                "({}) Loss: {} Batch loss: {}",
+            progress_bar.finish();
+
+            print!(
+                "({}) Loss: {} ",
                 epoch,
-                epoch_loss / (x.len() as f64 / batch_size as f64),
-                epoch_loss
+                epoch_loss / (x.len() as f64 / batch_size as f64)
             );
+
+            print_metrics(epoch_predictions, &metrics, &y);
+            println!()
         }
     }
 
@@ -122,12 +141,12 @@ impl Model {
     }
 
     pub fn evaluate(&mut self, data: &DMatrix<f64>) -> DMatrix<f64> {
-        let mut last_output = data.clone();
+        let mut last_output = data;
 
         self.layers
             .iter_mut()
             .for_each(|layer| last_output = layer.forward(&last_output));
 
-        last_output
+        last_output.clone()
     }
 }
