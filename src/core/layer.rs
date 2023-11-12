@@ -63,18 +63,12 @@ impl Layer {
         }
     }
 
-    pub fn forward(&mut self, data: &DMatrix<f64>) -> DMatrix<f64> {
-        // Data.column size must be equal to self.weights.lines size
+    pub fn forward(&mut self, data: &DMatrix<f64>) -> &DMatrix<f64> {
+        self.last_raw_output = (data * &self.weights) + &self.biases;
 
-        let mut output = (data * &self.weights) + &self.biases;
+        self.last_activated_output = self.last_raw_output.map(|x| (self.activation)(x));
 
-        self.last_raw_output = output.clone();
-
-        output = output.map(|x| (self.activation)(x));
-
-        self.last_activated_output = output.clone();
-
-        output
+        &self.last_activated_output
     }
 
     pub fn propagate_error(
@@ -107,9 +101,9 @@ impl Layer {
         }
 
         if self.deltas.is_empty() {
-            self.deltas = delta.clone().transpose();
+            self.deltas = delta.transpose();
         } else {
-            self.deltas += delta.clone().transpose();
+            self.deltas += delta.transpose();
         }
 
         delta
@@ -119,24 +113,6 @@ impl Layer {
         self.errors = DMatrix::zeros(0, 0);
         self.deltas = DMatrix::zeros(0, 0);
     }
-
-    // pub fn update_params(&mut self, learning_rate: f64, batch_size: usize) {
-    //     let mut transposed_error = self.errors.transpose();
-
-    //     transposed_error /= batch_size as f64;
-    //     transposed_error.scale_mut(learning_rate);
-
-    //     self.weights -= transposed_error;
-
-    //     let mut transposed_delta = self.deltas.transpose();
-
-    //     transposed_delta /= batch_size as f64;
-    //     transposed_delta.scale_mut(learning_rate);
-
-    //     self.biases -= transposed_delta;
-
-    //     self.clear_error_and_delta()
-    // }
 
     pub fn get_optimizer_params(&mut self) -> &mut HashMap<String, DMatrix<f64>> {
         &mut self.optimizer_params

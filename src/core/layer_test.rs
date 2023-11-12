@@ -15,6 +15,6 @@ mod tests {
 
         let data = DMatrix::from_vec(1, 2, vec![0.0, 1.0]);
 
-        assert_eq!(layer.forward(&data), Matrix1x3::new(1.5, 1.1, 1.7))
+        assert_eq!(layer.forward(&data).clone(), Matrix1x3::new(1.5, 1.1, 1.7))
     }
 }
