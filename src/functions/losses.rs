@@ -14,10 +14,7 @@ pub fn mse_derivative(expected: &DMatrix<f64>, predicted: &DMatrix<f64>) -> DMat
 }
 
 pub fn categorical_crossentropy(true_outputs: &DMatrix<f64>, pred_outputs: &DMatrix<f64>) -> f64 {
-    assert_eq!(true_outputs.ncols(), pred_outputs.ncols());
-    assert_eq!(true_outputs.nrows(), pred_outputs.nrows());
-
-    let log_preds = pred_outputs.map(|pred| if pred <= 0.0 { 0.0 } else { pred.ln() });
+    let log_preds = pred_outputs.map(|pred| (pred + 1e-9).ln()); // Adding epsilon before logarithm
     let product = true_outputs.component_mul(&log_preds);
     let losses = product.row_sum();
     -losses.sum()
@@ -27,8 +24,7 @@ pub fn categorical_crossentropy_derivative(
     true_outputs: &DMatrix<f64>,
     pred_outputs: &DMatrix<f64>,
 ) -> DMatrix<f64> {
-    assert_eq!(true_outputs.ncols(), pred_outputs.ncols());
-    assert_eq!(true_outputs.nrows(), pred_outputs.nrows());
+    let one_hot_predictions = pred_outputs.map(|x| if x == 0.0 { 1e-9 } else { x });
 
-    pred_outputs - true_outputs
+    -true_outputs.component_div(&one_hot_predictions)
 }

@@ -63,7 +63,7 @@ impl Model {
 
             let progress_bar = ProgressBar::new(batches.len() as u64);
 
-            progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
                 .unwrap()
                 .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
                 .progress_chars("#>-"));
@@ -93,6 +93,7 @@ impl Model {
                 });
 
                 epoch_loss += batch_loss / input_batch.len() as f64;
+                progress_bar.set_message(format!("Batch loss: {}", batch_loss));
             }
 
             progress_bar.finish();
