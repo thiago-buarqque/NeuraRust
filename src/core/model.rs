@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use indicatif::{ProgressBar, ProgressStyle, ProgressState};
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use nalgebra::DMatrix;
 use rand::{thread_rng, Rng};
 
