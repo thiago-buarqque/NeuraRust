@@ -9,7 +9,6 @@ pub fn mse(expected: &DMatrix<f64>, predicted: &DMatrix<f64>) -> f64 {
     sum / n
 }
 
-
 pub fn mse_derivative(expected: &DMatrix<f64>, predicted: &DMatrix<f64>) -> DMatrix<f64> {
     predicted - expected
 }
@@ -24,7 +23,10 @@ pub fn categorical_crossentropy(true_outputs: &DMatrix<f64>, pred_outputs: &DMat
     -losses.sum()
 }
 
-pub fn categorical_crossentropy_derivative(true_outputs: &DMatrix<f64>, pred_outputs: &DMatrix<f64>) -> DMatrix<f64> {
+pub fn categorical_crossentropy_derivative(
+    true_outputs: &DMatrix<f64>,
+    pred_outputs: &DMatrix<f64>,
+) -> DMatrix<f64> {
     assert_eq!(true_outputs.ncols(), pred_outputs.ncols());
     assert_eq!(true_outputs.nrows(), pred_outputs.nrows());
 
