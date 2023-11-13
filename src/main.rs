@@ -64,13 +64,13 @@ fn main() {
         Ok((x, y)) => {
             println!("Loaded data x = {} y = {})", x.len(), y.len());
 
-            let hidden_layer1 = Layer::new(relu, relu_derivative, x[0].len(), 512);
+            let hidden_layer1 = Layer::new(relu, relu_derivative, x[0].len(), 128);
 
-            let hidden_layer2 = Layer::new(relu, relu_derivative, 512, 256);
+            let hidden_layer2 = Layer::new(relu, relu_derivative, 128, 64);
 
-            let hidden_layer3 = Layer::new(relu, relu_derivative, 256, 256);
+            let hidden_layer3 = Layer::new(relu, relu_derivative, 64, 64);
 
-            let output_layer = Layer::new(sigmoid, sigmoid_derivative, 256, y[0].len());
+            let output_layer = Layer::new(sigmoid, sigmoid_derivative, 64, y[0].len());
 
             let mut model = Model::new(
                 vec![hidden_layer1, hidden_layer2, hidden_layer3, output_layer],

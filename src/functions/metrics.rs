@@ -13,8 +13,6 @@ impl ClassConfusionMatrix {
         let true_positives = confusion_matrix[(class_index, class_index)];
         let false_positives = confusion_matrix.column(class_index).sum() - true_positives;
         let false_negatives = confusion_matrix.row(class_index).sum() - true_positives;
-        // let true_negatives =
-        //     confusion_matrix.sum() - false_positives - false_negatives - true_positives;
         let true_negatives = confusion_matrix.sum()
             - confusion_matrix.column(class_index).sum()
             - confusion_matrix.row(class_index).sum()
@@ -86,15 +84,14 @@ pub fn calculate_confusion_matrix(
     predictions: &Vec<DMatrix<f64>>,
     targets: &Vec<DMatrix<f64>>,
 ) -> DMatrix<usize> {
-    let num_classes = predictions.first().unwrap().ncols(); // Assuming all matrices have the same number of columns
+    let num_classes = predictions.first().unwrap().ncols();
 
-    // Initialize confusion matrix
     let mut confusion_matrix = DMatrix::zeros(num_classes, num_classes);
 
-    // Populate confusion matrix
     for (act_matrix, exp_matrix) in predictions.iter().zip(targets.iter()) {
         let predicted_class = determine_predicted_class(act_matrix);
         let actual_class = determine_actual_class(exp_matrix);
+
         confusion_matrix[(actual_class, predicted_class)] += 1;
     }
 
@@ -171,12 +168,10 @@ pub fn print_metrics(
 pub fn get_class_confusion_matrices(
     confusion_matrix: &DMatrix<usize>,
 ) -> Vec<ClassConfusionMatrix> {
-    let num_classes = confusion_matrix.nrows();
     let mut class_confusion_matrices = Vec::new();
 
-    for class_index in 0..num_classes {
-        let class_cm = ClassConfusionMatrix::new(confusion_matrix, class_index);
-        class_confusion_matrices.push(class_cm);
+    for class_index in 0..confusion_matrix.nrows() {
+        class_confusion_matrices.push(ClassConfusionMatrix::new(confusion_matrix, class_index));
     }
 
     class_confusion_matrices
