@@ -2,32 +2,87 @@
 mod tests {
     use nalgebra::DMatrix;
 
-    use crate::functions::metrics::{calculate_confusion_matrix, ConfusionMatrix};
+    use crate::functions::metrics::{
+        calculate_confusion_matrix, get_class_confusion_matrices, ClassConfusionMatrix,
+    };
 
     #[test]
     fn test_calculate_confusion_matrix() {
-        let y_true = vec![
-            DMatrix::from_vec(1, 2, vec![1.0, 0.0]),
-            DMatrix::from_vec(1, 2, vec![0.0, 1.0]),
-            DMatrix::from_vec(1, 2, vec![0.0, 1.0]),
-            DMatrix::from_vec(1, 2, vec![1.0, 0.0]),
+        let y_pred = vec![
+            DMatrix::from_vec(1, 3, vec![0.05, 0.95, 0.2]),
+            DMatrix::from_vec(1, 3, vec![0.73, 0.55, 0.1]),
+            DMatrix::from_vec(1, 3, vec![0.1, 0.5, 0.95]),
+            DMatrix::from_vec(1, 3, vec![0.2, 0.4, 0.85]),
         ];
 
-        let y_pred = vec![
-            DMatrix::from_vec(1, 2, vec![0.0, 1.0]),
-            DMatrix::from_vec(1, 2, vec![0.0, 1.0]),
-            DMatrix::from_vec(1, 2, vec![1.0, 0.0]),
-            DMatrix::from_vec(1, 2, vec![1.0, 0.0]),
+        let y_true = vec![
+            DMatrix::from_vec(1, 3, vec![0.0, 1.0, 0.0]),
+            DMatrix::from_vec(1, 3, vec![1.0, 0.0, 0.0]),
+            DMatrix::from_vec(1, 3, vec![0.0, 0.0, 1.0]),
+            DMatrix::from_vec(1, 3, vec![0.0, 1.0, 0.0]),
         ];
 
         let confusion_matrix = calculate_confusion_matrix(&y_pred, &y_true);
 
-        let expected = ConfusionMatrix {
-            false_negatives: 1,
-            false_positives: 1,
-            true_negatives: 1,
-            true_positives: 1,
-        };
-        assert_eq!(vec![expected.clone(), expected.clone()], confusion_matrix)
+        assert_eq!(
+            DMatrix::from_vec(3, 3, vec![1, 0, 0, 0, 1, 0, 0, 1, 1]),
+            confusion_matrix
+        );
+    }
+
+    #[test]
+    fn test_metrics() {
+        let confusion_matrix = DMatrix::from_vec(3, 3, vec![1, 0, 0, 0, 1, 0, 0, 1, 1]);
+
+        let class_confusion_matrices = get_class_confusion_matrices(&confusion_matrix);
+
+        assert_eq!(1.0, class_confusion_matrices[0].accuracy());
+        assert_eq!(0.75, class_confusion_matrices[1].accuracy());
+        assert_eq!(0.75, class_confusion_matrices[2].accuracy());
+
+        assert_eq!(1.0, class_confusion_matrices[0].precision());
+        assert_eq!(1.0, class_confusion_matrices[1].precision());
+        assert_eq!(0.5, class_confusion_matrices[2].precision());
+
+        assert_eq!(1.0, class_confusion_matrices[0].recall());
+        assert_eq!(0.5, class_confusion_matrices[1].recall());
+        assert_eq!(1.0, class_confusion_matrices[2].recall());
+
+        assert_eq!(1.0, class_confusion_matrices[0].f1_score());
+        assert_eq!(0.6666666666666666, class_confusion_matrices[1].f1_score());
+        assert_eq!(0.6666666666666666, class_confusion_matrices[2].f1_score());
+
+        let total_correct_predictions = confusion_matrix.diagonal().sum();
+        let total_predictions = confusion_matrix.sum();
+        let overall_accuracy = total_correct_predictions as f64 / total_predictions as f64;
+
+        assert_eq!(0.75, overall_accuracy);
+
+        assert_eq!(
+            0.8333333333333334,
+            class_confusion_matrices
+                .iter()
+                .map(|cm| cm.precision())
+                .sum::<f64>()
+                / class_confusion_matrices.len() as f64
+        );
+
+        assert_eq!(
+            0.8333333333333334,
+            class_confusion_matrices
+                .iter()
+                .map(|cm| cm.recall())
+                .sum::<f64>()
+                / class_confusion_matrices.len() as f64
+        );
+
+        assert_eq!(
+            0.7777777777777777,
+            class_confusion_matrices
+                .iter()
+                .map(|cm| cm.f1_score())
+                .sum::<f64>()
+                / class_confusion_matrices.len() as f64
+        );
     }
 }

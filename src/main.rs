@@ -66,12 +66,14 @@ fn main() {
 
             let hidden_layer1 = Layer::new(relu, relu_derivative, x[0].len(), 512);
 
-            let hidden_layer2 = Layer::new(relu, relu_derivative, 512, 512);
+            let hidden_layer2 = Layer::new(relu, relu_derivative, 512, 256);
 
-            let output_layer = Layer::new(sigmoid, sigmoid_derivative, 512, y[0].len());
+            let hidden_layer3 = Layer::new(relu, relu_derivative, 256, 256);
+
+            let output_layer = Layer::new(sigmoid, sigmoid_derivative, 256, y[0].len());
 
             let mut model = Model::new(
-                vec![hidden_layer1, hidden_layer2, output_layer],
+                vec![hidden_layer1, hidden_layer2, hidden_layer3, output_layer],
                 categorical_crossentropy,
                 categorical_crossentropy_derivative,
             );
@@ -80,9 +82,14 @@ fn main() {
 
             model.fit(
                 128,
-                10,
-                0.01,
-                vec!["accuracy".to_string(), "recall".to_string()],
+                50,
+                0.05,
+                vec![
+                    "accuracy".to_string(),
+                    "recall".to_string(),
+                    "f1-score".to_string(),
+                    "precision".to_string(),
+                ],
                 &mut rmsprop,
                 x,
                 y,
