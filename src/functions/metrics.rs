@@ -1,14 +1,33 @@
 use nalgebra::DMatrix;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ConfusionMatrix {
+pub struct ClassConfusionMatrix {
     pub false_negatives: usize,
     pub false_positives: usize,
     pub true_negatives: usize,
     pub true_positives: usize,
 }
 
-impl ConfusionMatrix {
+impl ClassConfusionMatrix {
+    pub fn new(confusion_matrix: &DMatrix<usize>, class_index: usize) -> Self {
+        let true_positives = confusion_matrix[(class_index, class_index)];
+        let false_positives = confusion_matrix.column(class_index).sum() - true_positives;
+        let false_negatives = confusion_matrix.row(class_index).sum() - true_positives;
+        // let true_negatives =
+        //     confusion_matrix.sum() - false_positives - false_negatives - true_positives;
+        let true_negatives = confusion_matrix.sum()
+            - confusion_matrix.column(class_index).sum()
+            - confusion_matrix.row(class_index).sum()
+            + true_positives;
+
+        ClassConfusionMatrix {
+            false_negatives,
+            false_positives,
+            true_negatives,
+            true_positives,
+        }
+    }
+
     pub fn empty() -> Self {
         Self {
             false_negatives: 0,
@@ -66,26 +85,40 @@ impl ConfusionMatrix {
 pub fn calculate_confusion_matrix(
     predictions: &Vec<DMatrix<f64>>,
     targets: &Vec<DMatrix<f64>>,
-) -> Vec<ConfusionMatrix> {
-    let mut classes_confusion_matrices = Vec::new();
+) -> DMatrix<usize> {
+    let num_classes = predictions.first().unwrap().ncols(); // Assuming all matrices have the same number of columns
 
-    for _ in 0..predictions[0].shape().1 {
-        classes_confusion_matrices.push(ConfusionMatrix::empty())
+    // Initialize confusion matrix
+    let mut confusion_matrix = DMatrix::zeros(num_classes, num_classes);
+
+    // Populate confusion matrix
+    for (act_matrix, exp_matrix) in predictions.iter().zip(targets.iter()) {
+        let predicted_class = determine_predicted_class(act_matrix);
+        let actual_class = determine_actual_class(exp_matrix);
+        confusion_matrix[(actual_class, predicted_class)] += 1;
     }
 
-    for i in 0..predictions.len() {
-        for j in 0..predictions[i].shape().1 {
-            match (predictions[i][j].round() as u32, targets[i][j] as u32) {
-                (1, 1) => classes_confusion_matrices[j].true_positives += 1,
-                (0, 0) => classes_confusion_matrices[j].true_negatives += 1,
-                (1, 0) => classes_confusion_matrices[j].false_positives += 1,
-                (0, 1) => classes_confusion_matrices[j].false_negatives += 1,
-                _ => {}
-            }
-        }
-    }
+    confusion_matrix
+}
 
-    classes_confusion_matrices
+fn determine_predicted_class(matrix: &DMatrix<f64>) -> usize {
+    matrix
+        .row(0)
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        .unwrap()
+        .0
+}
+
+fn determine_actual_class(matrix: &DMatrix<f64>) -> usize {
+    matrix
+        .row(0)
+        .iter()
+        .enumerate()
+        .find(|&(_, &value)| value == 1.0)
+        .unwrap()
+        .0
 }
 
 pub fn print_metrics(
@@ -93,30 +126,58 @@ pub fn print_metrics(
     metrics: &Vec<String>,
     y: &Vec<DMatrix<f64>>,
 ) {
-    let classes_confusion_matrices = calculate_confusion_matrix(&epoch_predictions, y);
+    let confusion_matrix = calculate_confusion_matrix(&epoch_predictions, y);
+
+    let class_confusion_matrices = get_class_confusion_matrices(&confusion_matrix);
 
     metrics.iter().for_each(|metric| {
-        let mut scores: Vec<f64> = classes_confusion_matrices.iter().map(|_| 0.0_f64).collect();
+        let mut score: f64 = 0.0;
 
         if metric.eq_ignore_ascii_case("accuracy") {
-            scores = classes_confusion_matrices.iter().map(|cm| cm.accuracy()).collect();
+            let total_correct_predictions = confusion_matrix.diagonal().sum();
+            let total_predictions = confusion_matrix.sum();
+            score = total_correct_predictions as f64 / total_predictions as f64;
         }
 
         if metric.eq_ignore_ascii_case("precision") {
-            scores = classes_confusion_matrices.iter().map(|cm| cm.precision()).collect();
+            score = class_confusion_matrices
+                .iter()
+                .map(|cm| cm.precision())
+                .sum::<f64>();
         }
 
         if metric.eq_ignore_ascii_case("recall") {
-            scores = classes_confusion_matrices.iter().map(|cm| cm.recall()).collect();
+            score = class_confusion_matrices
+                .iter()
+                .map(|cm| cm.recall())
+                .sum::<f64>();
         }
 
         if metric.eq_ignore_ascii_case("f1-score") {
-            scores = classes_confusion_matrices.iter().map(|cm| cm.f1_score()).collect();
+            score = class_confusion_matrices
+                .iter()
+                .map(|cm| cm.f1_score())
+                .sum::<f64>();
         }
 
         print!(
             " {}: {:.0}%",
-            metric,(scores.iter().sum::<f64>() / classes_confusion_matrices.len() as f64) * 100.0
+            metric,
+            (score / class_confusion_matrices.len() as f64) * 100.0
         );
     })
+}
+
+pub fn get_class_confusion_matrices(
+    confusion_matrix: &DMatrix<usize>,
+) -> Vec<ClassConfusionMatrix> {
+    let num_classes = confusion_matrix.nrows();
+    let mut class_confusion_matrices = Vec::new();
+
+    for class_index in 0..num_classes {
+        let class_cm = ClassConfusionMatrix::new(confusion_matrix, class_index);
+        class_confusion_matrices.push(class_cm);
+    }
+
+    class_confusion_matrices
 }
