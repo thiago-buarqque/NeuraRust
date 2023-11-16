@@ -11,12 +11,19 @@ pub struct ClassConfusionMatrix {
 impl ClassConfusionMatrix {
     pub fn new(confusion_matrix: &DMatrix<usize>, class_index: usize) -> Self {
         let true_positives = confusion_matrix[(class_index, class_index)];
-        let false_positives = confusion_matrix.column(class_index).sum() - true_positives;
-        let false_negatives = confusion_matrix.row(class_index).sum() - true_positives;
+
+        let column_sum = confusion_matrix.column(class_index).sum();
+
+        let false_positives = column_sum - true_positives;
+
+        let row_sum = confusion_matrix.row(class_index).sum();
+
+        let false_negatives = row_sum - true_positives;
+
         let true_negatives = confusion_matrix.sum()
-            - confusion_matrix.column(class_index).sum()
-            - confusion_matrix.row(class_index).sum()
-            + true_positives;
+            + true_positives
+            - column_sum
+            - row_sum;
 
         ClassConfusionMatrix {
             false_negatives,
@@ -90,9 +97,9 @@ pub fn calculate_confusion_matrix(
 
     for (act_matrix, exp_matrix) in predictions.iter().zip(targets.iter()) {
         let predicted_class = determine_predicted_class(act_matrix);
-        let actual_class = determine_actual_class(exp_matrix);
+        let exp_class = determine_actual_class(exp_matrix);
 
-        confusion_matrix[(actual_class, predicted_class)] += 1;
+        confusion_matrix[(exp_class, predicted_class)] += 1;
     }
 
     confusion_matrix
@@ -125,6 +132,8 @@ pub fn print_metrics(
 ) {
     let confusion_matrix = calculate_confusion_matrix(&epoch_predictions, y);
 
+    // println!("Confusion matrix: {}", confusion_matrix);
+
     let class_confusion_matrices = get_class_confusion_matrices(&confusion_matrix);
 
     metrics.iter().for_each(|metric| {
@@ -134,34 +143,41 @@ pub fn print_metrics(
             let total_correct_predictions = confusion_matrix.diagonal().sum();
             let total_predictions = confusion_matrix.sum();
             score = total_correct_predictions as f64 / total_predictions as f64;
-        }
 
-        if metric.eq_ignore_ascii_case("precision") {
-            score = class_confusion_matrices
-                .iter()
-                .map(|cm| cm.precision())
-                .sum::<f64>();
+            print!(
+                " {}: {:.0}%",
+                metric,
+                (score) * 100.0
+            );
         }
+        else {
+            if metric.eq_ignore_ascii_case("precision") {
+                score = class_confusion_matrices
+                    .iter()
+                    .map(|cm| cm.precision())
+                    .sum::<f64>();
+            }
 
-        if metric.eq_ignore_ascii_case("recall") {
-            score = class_confusion_matrices
-                .iter()
-                .map(|cm| cm.recall())
-                .sum::<f64>();
+            if metric.eq_ignore_ascii_case("recall") {
+                score = class_confusion_matrices
+                    .iter()
+                    .map(|cm| cm.recall())
+                    .sum::<f64>();
+            }
+
+            if metric.eq_ignore_ascii_case("f1-score") {
+                score = class_confusion_matrices
+                    .iter()
+                    .map(|cm| cm.f1_score())
+                    .sum::<f64>();
+            }
+
+            print!(
+                " {}: {:.0}%",
+                metric,
+                (score / class_confusion_matrices.len() as f64) * 100.0
+            );
         }
-
-        if metric.eq_ignore_ascii_case("f1-score") {
-            score = class_confusion_matrices
-                .iter()
-                .map(|cm| cm.f1_score())
-                .sum::<f64>();
-        }
-
-        print!(
-            " {}: {:.0}%",
-            metric,
-            (score / class_confusion_matrices.len() as f64) * 100.0
-        );
     })
 }
 

@@ -54,24 +54,28 @@ impl Model {
             .for_each(|layer| optimizer.initialize_layer_additional_params(layer));
 
         for epoch in 0..epochs {
-            Self::shuffle_dataset(&mut x, &mut y);
+            // Self::shuffle_dataset(&mut x, &mut y);
 
             let batches = x.chunks(batch_size).zip(y.chunks(batch_size));
 
             let mut epoch_predictions = Vec::with_capacity(x.len());
             let mut epoch_loss = 0_f64;
 
-            let progress_bar = ProgressBar::new(batches.len() as u64);
+            // let progress_bar = ProgressBar::new(batches.len() as u64);
 
-            progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-                .unwrap()
-                .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
-                .progress_chars("#>-"));
+            // progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            //     .unwrap()
+            //     .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+            //     .progress_chars("#>-"));
 
             for (input_batch, target_batch) in batches {
-                progress_bar.inc(1);
+                // progress_bar.inc(1);
 
                 let mut batch_loss = 0_f64;
+
+                self.layers
+                    .iter_mut()
+                    .for_each(|layer| layer.clear_error_and_delta());
 
                 for (input_data, target_data) in input_batch.iter().zip(target_batch.iter()) {
                     let mut prediction = self.evaluate(input_data);
@@ -80,6 +84,8 @@ impl Model {
                         // Binary classification
                         prediction = prediction.map(|x| if x > 0.5 { 1.0 } else { 0.0 })
                     }
+
+                    println!(" Pred: {:?} Exp: {:?}", prediction.data.as_vec(), target_data.data.as_vec());
 
                     batch_loss += (self.loss)(target_data, &prediction);
 
@@ -92,17 +98,17 @@ impl Model {
                     optimizer.update_params(input_batch.len(), layer, learning_rate)
                 });
 
+                // self.layers.iter_mut().for_each(|layer| {
+                //     layer.update_params(learning_rate, batch_size)
+                // });
+
                 epoch_loss += batch_loss / input_batch.len() as f64;
-                progress_bar.set_message(format!("Batch loss: {}", batch_loss));
+                // progress_bar.set_message(format!("Batch loss: {}", batch_loss));
             }
 
-            progress_bar.finish();
+            // progress_bar.finish();
 
-            print!(
-                "({}) Loss: {} ",
-                epoch,
-                epoch_loss / (x.len() as f64 / batch_size as f64)
-            );
+            print!("({}) Loss: {} ", epoch, epoch_loss);
 
             print_metrics(epoch_predictions, &metrics, &y);
             println!()

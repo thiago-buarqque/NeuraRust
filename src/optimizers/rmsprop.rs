@@ -33,29 +33,23 @@ impl Optimizer for RMSProp {
 
         let mut errors = layer.get_errors_clone();
 
-        errors /= batch_size as f64;
-        errors.scale_mut(learning_rate);
-        errors = errors.component_div(&weights_moving_avg.map(|x| (x + 1e-8).sqrt()));
+        let mut w_step_sizes = 
+            weights_moving_avg.map(|x| learning_rate / (x + 1e-8).sqrt());
+
+        w_step_sizes = w_step_sizes.component_mul(&errors);
 
         let weights_ref = layer.get_weights_reference();
-        *weights_ref -= errors;
+        *weights_ref -= w_step_sizes.map(|x| x / batch_size as f64);
 
         let mut deltas = layer.get_deltas_clone();
 
-        deltas /= batch_size as f64;
-        deltas.scale_mut(learning_rate);
-        deltas = deltas.component_div(&biases_moving_avg.map(|x| (x + 1e-8).sqrt()));
+        let mut b_step_sizes = 
+        biases_moving_avg.map(|x| learning_rate / (x + 1e-8).sqrt());
+        
+        b_step_sizes = b_step_sizes.component_mul(&deltas);
 
         let biases_ref = layer.get_biases_reference();
-        *biases_ref -= deltas;
-    }
-
-    fn save_mid_epoch_params(
-        &mut self,
-        deltas: &nalgebra::DMatrix<f64>,
-        errors: &nalgebra::DMatrix<f64>,
-    ) {
-        todo!()
+        *biases_ref -= b_step_sizes.map(|x| x / batch_size as f64);
     }
 }
 
