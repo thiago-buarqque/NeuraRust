@@ -7,8 +7,8 @@ mod tests {
     #[test]
     fn test_forward() {
         let mut layer = Layer::from(
-            |x| x,
-            |x| x,
+            |x| x.clone(),
+            |x| x.clone(),
             DMatrix::from_vec(1, 3, vec![1.0, 1.0, 1.0]),
             DMatrix::from_vec(2, 3, vec![0.5, 0.5, 0.1, 0.1, 0.7, 0.7]),
         );
