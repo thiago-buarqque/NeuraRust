@@ -26,20 +26,20 @@ mod core;
 mod functions;
 mod optimizers;
 
-fn read_csv(file_path: &str) -> Result<(Vec<DMatrix<f64>>, Vec<DMatrix<f64>>), Box<dyn Error>> {
+fn read_csv(file_path: &str) -> Result<(Vec<DMatrix<f32>>, Vec<DMatrix<f32>>), Box<dyn Error>> {
     let mut rdr = csv::Reader::from_path(file_path)?;
 
-    let mut x: Vec<DMatrix<f64>> = Vec::new();
-    let mut y: Vec<DMatrix<f64>> = Vec::new();
+    let mut x: Vec<DMatrix<f32>> = Vec::new();
+    let mut y: Vec<DMatrix<f32>> = Vec::new();
 
     for result in rdr.records() {
         let record = result?;
 
         let class = record[0].parse::<usize>().unwrap();
 
-        let float_record: Vec<f64> = record
+        let float_record: Vec<f32> = record
             .iter()
-            .map(|x| x.parse::<f64>().unwrap() / 255.0)
+            .map(|x| x.parse::<f32>().unwrap() / 255.0)
             .collect();
 
         x.push(DMatrix::from_vec(

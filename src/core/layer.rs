@@ -5,35 +5,35 @@ use rand::{Rng, rngs::StdRng, SeedableRng};
 use nalgebra::DMatrix;
 
 pub struct Layer {
-    activation: fn(&DMatrix<f64>) -> DMatrix<f64>,
-    activation_derivative: fn(&DMatrix<f64>) -> DMatrix<f64>,
-    biases: DMatrix<f64>,
-    deltas: DMatrix<f64>,
-    errors: DMatrix<f64>,
-    last_activated_output: DMatrix<f64>,
-    last_raw_output: DMatrix<f64>,
-    optimizer_params: HashMap<String, DMatrix<f64>>,
-    weights: DMatrix<f64>,
+    activation: fn(&DMatrix<f32>) -> DMatrix<f32>,
+    activation_derivative: fn(&DMatrix<f32>) -> DMatrix<f32>,
+    biases: DMatrix<f32>,
+    deltas: DMatrix<f32>,
+    errors: DMatrix<f32>,
+    last_activated_output: DMatrix<f32>,
+    last_raw_output: DMatrix<f32>,
+    optimizer_params: HashMap<String, DMatrix<f32>>,
+    weights: DMatrix<f32>,
 }
 
 impl Layer {
     pub fn new(
-        activation: fn(&DMatrix<f64>) -> DMatrix<f64>,
-        activation_derivative: fn(&DMatrix<f64>) -> DMatrix<f64>,
+        activation: fn(&DMatrix<f32>) -> DMatrix<f32>,
+        activation_derivative: fn(&DMatrix<f32>) -> DMatrix<f32>,
         input_dim: usize,
         neurons: usize,
     ) -> Self {
         // let mut rng = rand::thread_rng();
         let mut r = StdRng::seed_from_u64(222);
 
-        let bound = (1.0/(input_dim as f64).sqrt());
+        let bound = (1.0/(input_dim as f32).sqrt());
         let (lower, upper) = (-bound, bound);
 
-        let weights: Vec<f64> = (0..input_dim * neurons)
+        let weights: Vec<f32> = (0..input_dim * neurons)
             .map(|_| lower + r.gen_range(lower..upper) * (upper - lower))
             .collect();
 
-        let biases: Vec<f64> = (0..neurons).map(|_| lower + r.gen_range(lower..upper) * (upper - lower)).collect();
+        let biases: Vec<f32> = (0..neurons).map(|_| lower + r.gen_range(lower..upper) * (upper - lower)).collect();
 
         Self {
             activation,
@@ -49,10 +49,10 @@ impl Layer {
     }
 
     pub fn from(
-        activation: fn(&DMatrix<f64>) -> DMatrix<f64>,
-        activation_derivative: fn(&DMatrix<f64>) -> DMatrix<f64>,
-        biases: DMatrix<f64>,
-        weights: DMatrix<f64>,
+        activation: fn(&DMatrix<f32>) -> DMatrix<f32>,
+        activation_derivative: fn(&DMatrix<f32>) -> DMatrix<f32>,
+        biases: DMatrix<f32>,
+        weights: DMatrix<f32>,
     ) -> Self {
         Self {
             activation,
@@ -67,7 +67,7 @@ impl Layer {
         }
     }
 
-    pub fn forward(&mut self, data: &DMatrix<f64>) -> &DMatrix<f64> {
+    pub fn forward(&mut self, data: &DMatrix<f32>) -> &DMatrix<f32> {
         self.last_raw_output = (data * &self.weights) + &self.biases;
 
         self.last_activated_output = (self.activation)(&self.last_raw_output);
@@ -78,10 +78,10 @@ impl Layer {
     pub fn propagate_error(
         &mut self,
         last_layer: bool,
-        next_layer_delta: &DMatrix<f64>,
-        next_layer_weights: &DMatrix<f64>,
-        previous_layer_output: &DMatrix<f64>,
-    ) -> DMatrix<f64> {
+        next_layer_delta: &DMatrix<f32>,
+        next_layer_weights: &DMatrix<f32>,
+        previous_layer_output: &DMatrix<f32>,
+    ) -> DMatrix<f32> {
         let activation_derivative = (self.activation_derivative)(&self.last_raw_output);
 
         let deltas = if last_layer {
@@ -111,14 +111,14 @@ impl Layer {
         deltas
     }
 
-    pub fn update_params(&mut self, learning_rate: f64, batch_size: usize) {
-        let mut transposed_error = &self.errors / batch_size as f64;
+    pub fn update_params(&mut self, learning_rate: f32, batch_size: usize) {
+        let mut transposed_error = &self.errors / batch_size as f32;
 
         transposed_error.scale_mut(learning_rate);
 
         self.weights -= transposed_error;
 
-        let mut transposed_delta = &self.deltas / batch_size as f64;
+        let mut transposed_delta = &self.deltas / batch_size as f32;
 
         transposed_delta.scale_mut(learning_rate);
 
@@ -132,35 +132,35 @@ impl Layer {
         self.deltas = DMatrix::zeros(0, 0);
     }
 
-    pub fn get_optimizer_params(&mut self) -> &mut HashMap<String, DMatrix<f64>> {
+    pub fn get_optimizer_params(&mut self) -> &mut HashMap<String, DMatrix<f32>> {
         &mut self.optimizer_params
     }
 
-    pub fn get_last_output(&self) -> DMatrix<f64> {
+    pub fn get_last_output(&self) -> DMatrix<f32> {
         self.last_activated_output.clone()
     }
 
-    pub fn get_biases(&self) -> DMatrix<f64> {
+    pub fn get_biases(&self) -> DMatrix<f32> {
         self.biases.clone()
     }
 
-    pub fn get_deltas_clone(&self) -> DMatrix<f64> {
+    pub fn get_deltas_clone(&self) -> DMatrix<f32> {
         self.deltas.clone()
     }
 
-    pub fn get_errors_clone(&self) -> DMatrix<f64> {
+    pub fn get_errors_clone(&self) -> DMatrix<f32> {
         self.errors.clone()
     }
 
-    pub fn get_biases_reference(&mut self) -> &mut DMatrix<f64> {
+    pub fn get_biases_reference(&mut self) -> &mut DMatrix<f32> {
         &mut self.biases
     }
 
-    pub fn get_weights_reference(&mut self) -> &mut DMatrix<f64> {
+    pub fn get_weights_reference(&mut self) -> &mut DMatrix<f32> {
         &mut self.weights
     }
 
-    pub fn get_weights(&self) -> DMatrix<f64> {
+    pub fn get_weights(&self) -> DMatrix<f32> {
         self.weights.clone()
     }
 

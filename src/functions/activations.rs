@@ -1,30 +1,30 @@
-use std::f64::consts::E;
+use std::f32::consts::E;
 
 use nalgebra::DMatrix;
 
-pub fn sigmoid(raw_output: &DMatrix<f64>) -> DMatrix<f64> {
+pub fn sigmoid(raw_output: &DMatrix<f32>) -> DMatrix<f32> {
     raw_output.map(|x| 1.0 / (1.0 + E.powf(-x)))
 }
 
-pub fn sigmoid_derivative(raw_output: &DMatrix<f64>) -> DMatrix<f64> {
+pub fn sigmoid_derivative(raw_output: &DMatrix<f32>) -> DMatrix<f32> {
     raw_output.map(|x| {
         let s = 1.0 / (1.0 + E.powf(-x));
         s * (1.0 - s)
     })
 }
 
-pub fn softmax(input: &DMatrix<f64>) -> DMatrix<f64> {
+pub fn softmax(input: &DMatrix<f32>) -> DMatrix<f32> {
     let exp_values = input.map(|x| x.exp());
     let sum_exp_values = exp_values.sum();
 
     exp_values / (sum_exp_values)
 }
 
-pub fn softmax_derivative(raw_output: &DMatrix<f64>) -> DMatrix<f64> {
+pub fn softmax_derivative(raw_output: &DMatrix<f32>) -> DMatrix<f32> {
     let n = raw_output.nrows();
     let m = raw_output.ncols();
 
-    let mut jacobian = DMatrix::<f64>::from_element(n, m, 0.0);
+    let mut jacobian = DMatrix::<f32>::from_element(n, m, 0.0);
 
     for i in 0..n {
         for j in 0..m {
@@ -39,7 +39,7 @@ pub fn softmax_derivative(raw_output: &DMatrix<f64>) -> DMatrix<f64> {
     jacobian
 }
 
-pub fn relu(raw_output: &DMatrix<f64>) -> DMatrix<f64> {
+pub fn relu(raw_output: &DMatrix<f32>) -> DMatrix<f32> {
     raw_output.map(|x| if x > 0.0 {
         x
     } else {
@@ -47,7 +47,7 @@ pub fn relu(raw_output: &DMatrix<f64>) -> DMatrix<f64> {
     })
 }
 
-pub fn relu_derivative(raw_output: &DMatrix<f64>) -> DMatrix<f64> {
+pub fn relu_derivative(raw_output: &DMatrix<f32>) -> DMatrix<f32> {
     raw_output.map(|x| if x > 0.0 {
         1.0
     } else {

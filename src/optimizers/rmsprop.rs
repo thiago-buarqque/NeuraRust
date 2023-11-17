@@ -3,7 +3,7 @@ use nalgebra::DMatrix;
 use super::optimizer::Optimizer;
 
 pub struct RMSProp {
-    decay_rate: f64,
+    decay_rate: f32,
 }
 
 impl Optimizer for RMSProp {
@@ -27,7 +27,7 @@ impl Optimizer for RMSProp {
         &mut self,
         batch_size: usize,
         layer: &mut crate::core::layer::Layer,
-        learning_rate: f64,
+        learning_rate: f32,
     ) {
         let (weights_moving_avg, biases_moving_avg) = self.calculate_moving_avg(layer);
 
@@ -39,7 +39,7 @@ impl Optimizer for RMSProp {
         w_step_sizes = w_step_sizes.component_mul(&errors);
 
         let weights_ref = layer.get_weights_reference();
-        *weights_ref -= w_step_sizes.map(|x| x / batch_size as f64);
+        *weights_ref -= w_step_sizes.map(|x| x / batch_size as f32);
 
         let mut deltas = layer.get_deltas_clone();
 
@@ -49,18 +49,18 @@ impl Optimizer for RMSProp {
         b_step_sizes = b_step_sizes.component_mul(&deltas);
 
         let biases_ref = layer.get_biases_reference();
-        *biases_ref -= b_step_sizes.map(|x| x / batch_size as f64);
+        *biases_ref -= b_step_sizes.map(|x| x / batch_size as f32);
     }
 }
 
 impl RMSProp {
-    pub fn new(decay_rate: f64) -> Self {
+    pub fn new(decay_rate: f32) -> Self {
         Self { decay_rate }
     }
     fn calculate_moving_avg(
         &mut self,
         layer: &mut crate::core::layer::Layer,
-    ) -> (DMatrix<f64>, DMatrix<f64>) {
+    ) -> (DMatrix<f32>, DMatrix<f32>) {
         let mut errors = layer.get_errors_clone();
         let mut deltas = layer.get_deltas_clone();
 
