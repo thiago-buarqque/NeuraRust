@@ -14,7 +14,7 @@ pub fn sigmoid_derivative(raw_output: &DMatrix<f32>) -> DMatrix<f32> {
 }
 
 pub fn softmax(input: &DMatrix<f32>) -> DMatrix<f32> {
-    let exp_values = input.map(|x| x.exp());
+    let exp_values = input.map(|x| E.powf(x));
     let sum_exp_values = exp_values.sum();
 
     exp_values / (sum_exp_values)

@@ -18,7 +18,9 @@ use crate::{
     core::{layer::Layer, model::Model},
     functions::{
         activations::{relu, relu_derivative, softmax, softmax_derivative},
-        losses::{categorical_crossentropy, categorical_crossentropy_derivative},
+        losses::{
+            categorical_crossentropy, categorical_crossentropy_derivative,
+        },
     },
 };
 
@@ -102,11 +104,15 @@ fn main() {
     //     Err(_) => println!("Error reading CSV file:"),
     // }
 
-    let hidden_layer = Layer::new(relu, relu_derivative, 2, 256);
+    let hidden_layer = Layer::new(relu, relu_derivative, 2, 20);
 
-    let output_layer = Layer::new(softmax, softmax_derivative, 256, 2);
+    let output_layer = Layer::new(softmax, softmax_derivative, 20, 2);
 
-    let mut model = Model::new(vec![hidden_layer, output_layer], categorical_crossentropy, categorical_crossentropy_derivative);
+    let mut model = Model::new(
+        vec![hidden_layer, output_layer],
+        categorical_crossentropy,
+        categorical_crossentropy_derivative,
+    );
 
     let mut rmsprop = RMSProp::new(0.9);
 
@@ -114,21 +120,21 @@ fn main() {
 
     model.fit(
         1,
-        50,
-        0.01,
+        1000,
+        0.001,
         vec!["accuracy".to_string()],
         &mut rmsprop,
         vec![
-            DMatrix::from_vec(1, 2, vec![0.0, 0.0]),
-            DMatrix::from_vec(1, 2, vec![1.0, 0.0]),
-            DMatrix::from_vec(1, 2, vec![0.0, 1.0]),
-            DMatrix::from_vec(1, 2, vec![1.0, 1.0]),
+            DMatrix::from_vec(2, 1, vec![0.0, 0.0]),
+            DMatrix::from_vec(2, 1, vec![1.0, 0.0]),
+            DMatrix::from_vec(2, 1, vec![0.0, 1.0]),
+            DMatrix::from_vec(2, 1, vec![1.0, 1.0]),
         ],
         vec![
-            DMatrix::from_vec(1, 2, vec![1.0, 0.0]),
-            DMatrix::from_vec(1, 2, vec![0.0, 1.0]),
-            DMatrix::from_vec(1, 2, vec![0.0, 1.0]),
-            DMatrix::from_vec(1, 2, vec![1.0, 0.0]),
+            DMatrix::from_vec(2, 1, vec![1.0, 0.0]),
+            DMatrix::from_vec(2, 1, vec![0.0, 1.0]),
+            DMatrix::from_vec(2, 1, vec![0.0, 1.0]),
+            DMatrix::from_vec(2, 1, vec![1.0, 0.0]),
         ],
     );
 

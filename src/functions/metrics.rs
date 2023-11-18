@@ -91,7 +91,7 @@ pub fn calculate_confusion_matrix(
     predictions: &Vec<DMatrix<f32>>,
     targets: &Vec<DMatrix<f32>>,
 ) -> DMatrix<usize> {
-    let num_classes = predictions.first().unwrap().ncols();
+    let num_classes = predictions.first().unwrap().nrows();
 
     let mut confusion_matrix = DMatrix::zeros(num_classes, num_classes);
 
@@ -107,7 +107,6 @@ pub fn calculate_confusion_matrix(
 
 fn determine_predicted_class(matrix: &DMatrix<f32>) -> usize {
     matrix
-        .row(0)
         .iter()
         .enumerate()
         .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
@@ -117,7 +116,6 @@ fn determine_predicted_class(matrix: &DMatrix<f32>) -> usize {
 
 fn determine_actual_class(matrix: &DMatrix<f32>) -> usize {
     matrix
-        .row(0)
         .iter()
         .enumerate()
         .find(|&(_, &value)| value == 1.0)

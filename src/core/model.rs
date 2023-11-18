@@ -110,7 +110,7 @@ impl Model {
 
             print!("({}) Loss: {} ", epoch, epoch_loss);
 
-            print_metrics(epoch_predictions, &metrics, &y);
+            // print_metrics(epoch_predictions, &metrics, &y);
             println!()
         }
     }

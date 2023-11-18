@@ -24,7 +24,7 @@ pub fn squared_error_derivative(expected: &DMatrix<f32>, predicted: &DMatrix<f32
 }
 
 pub fn categorical_crossentropy(expected: &DMatrix<f32>, predicted: &DMatrix<f32>) -> f32 {
-    let log_preds = predicted.map(|pred| (pred).ln() + 1e-15);
+    let log_preds = predicted.map(|pred| (pred + 1e-15).ln());
     let product = expected.component_mul(&log_preds);
 
     -product.sum()

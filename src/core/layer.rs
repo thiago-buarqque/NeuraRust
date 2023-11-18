@@ -23,8 +23,8 @@ impl Layer {
         input_dim: usize,
         neurons: usize,
     ) -> Self {
-        // let mut rng = rand::thread_rng();
-        let mut r = StdRng::seed_from_u64(222);
+        let mut r = rand::thread_rng();
+        // let mut r = StdRng::seed_from_u64(222);
 
         let bound = (1.0/(input_dim as f32).sqrt());
         let (lower, upper) = (-bound, bound);
@@ -38,13 +38,13 @@ impl Layer {
         Self {
             activation,
             activation_derivative,
-            biases: DMatrix::from_row_slice(1, neurons, &biases),
+            biases: DMatrix::from_row_slice(neurons, 1, &biases),
             deltas: DMatrix::zeros(0, 0),
             errors: DMatrix::zeros(0, 0),
             last_activated_output: DMatrix::identity(1, 1),
             last_raw_output: DMatrix::identity(1, 1),
             optimizer_params: HashMap::new(),
-            weights: DMatrix::from_row_slice(input_dim, neurons, &weights),
+            weights: DMatrix::from_row_slice(neurons, input_dim , &weights),
         }
     }
 
@@ -68,7 +68,7 @@ impl Layer {
     }
 
     pub fn forward(&mut self, data: &DMatrix<f32>) -> &DMatrix<f32> {
-        self.last_raw_output = (data * &self.weights) + &self.biases;
+        self.last_raw_output = (&self.weights * data) + &self.biases;
 
         self.last_activated_output = (self.activation)(&self.last_raw_output);
 
@@ -87,42 +87,40 @@ impl Layer {
         let deltas = if last_layer {
             activation_derivative
                 .component_mul(&next_layer_delta)
-                .transpose()
         } else {
-            let next_layer_weighted_error = next_layer_weights * next_layer_delta;
+            let next_layer_weighted_error = next_layer_weights.transpose() * next_layer_delta;
 
-            activation_derivative
-                .transpose()
-                .component_mul(&next_layer_weighted_error)
+            next_layer_weighted_error
+                .component_mul(&activation_derivative)
         };
 
         if self.errors.is_empty() {
-            self.errors = (&deltas * previous_layer_output).transpose();
+            self.errors = (&deltas * previous_layer_output.transpose());
         } else {
-            self.errors += (&deltas * previous_layer_output).transpose();
+            self.errors += (&deltas * previous_layer_output.transpose());
         }
 
         if self.deltas.is_empty() {
-            self.deltas = deltas.transpose();
+            self.deltas = deltas.clone();
         } else {
-            self.deltas += deltas.transpose();
+            self.deltas += deltas.clone();
         }
 
         deltas
     }
 
     pub fn update_params(&mut self, learning_rate: f32, batch_size: usize) {
-        let mut transposed_error = &self.errors / batch_size as f32;
+        let mut error = &self.errors / batch_size as f32;
 
-        transposed_error.scale_mut(learning_rate);
+        error.scale_mut(learning_rate);
 
-        self.weights -= transposed_error;
+        self.weights -= error;
 
-        let mut transposed_delta = &self.deltas / batch_size as f32;
+        let mut deltas = &self.deltas / batch_size as f32;
 
-        transposed_delta.scale_mut(learning_rate);
+        deltas.scale_mut(learning_rate);
 
-        self.biases -= transposed_delta;
+        self.biases -= deltas;
 
         self.clear_error_and_delta()
     }

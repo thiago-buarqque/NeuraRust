@@ -15,11 +15,11 @@ impl Optimizer for RMSProp {
 
         optimizer_params.insert(
             "weights_moving_avg".to_string(),
-            DMatrix::zeros(input_dim, output_dim),
+            DMatrix::zeros(output_dim, input_dim),
         );
         optimizer_params.insert(
             "biases_moving_avg".to_string(),
-            DMatrix::zeros(1, output_dim),
+            DMatrix::zeros(output_dim, 1),
         );
     }
 
