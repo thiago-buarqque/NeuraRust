@@ -68,23 +68,13 @@ impl Model {
             //     .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f32()).unwrap())
             //     .progress_chars("#>-"));
 
-            let mut first = true;
             for (input_batch, target_batch) in batches {
                 // progress_bar.inc(1);
 
                 let mut batch_loss = 0_f32;
 
-                self.layers
-                    .iter_mut()
-                    .for_each(|layer| layer.clear_error_and_delta());
-
                 for (input_data, target_data) in input_batch.iter().zip(target_batch.iter()) {
                     let mut prediction = self.evaluate(input_data);
-
-                    // if prediction.len() == 1 {
-                    //     // Binary classification
-                    //     prediction = prediction.map(|x| if x > 0.5 { 1.0 } else { 0.0 })
-                    // }
 
                     batch_loss += (self.loss)(target_data, &prediction);
 
@@ -94,7 +84,8 @@ impl Model {
                 }
 
                 self.layers.iter_mut().for_each(|layer| {
-                    optimizer.update_params(input_batch.len(), layer, learning_rate)
+                    optimizer.update_params(input_batch.len(), layer, learning_rate);
+                    layer.clear_error_and_delta()
                 });
 
                 epoch_loss += batch_loss as f32;
@@ -120,27 +111,33 @@ impl Model {
     ) {
         let mut next_layer_delta = (self.loss_derivative)(&expected, &predicted);
 
+        let zeros = DMatrix::zeros(0, 0);
+        
+        let mut next_layer_errors;
         for i in (0..self.layers.len()).rev() {
             let previous_layer_output = if i == 0 {
-                network_input.clone()
+                network_input
             } else {
                 self.layers[i - 1].get_last_output()
             };
 
             let last_layer = i == self.layers.len() - 1;
 
+
             let next_layer_weights = if last_layer {
-                DMatrix::zeros(0, 0)
+                &zeros
             } else {
-                self.layers[i + 1].get_weights()
+                self.layers[i + 1].get_weights_reference()
             };
 
-            next_layer_delta = self.layers[i].propagate_error(
+            (next_layer_errors, next_layer_delta) = self.layers[i].propagate_error(
                 last_layer,
                 &next_layer_delta,
                 &next_layer_weights,
                 &previous_layer_output,
             );
+
+            self.layers[i].sum_errors_and_deltas(&next_layer_delta, &next_layer_errors)
         }
     }
 

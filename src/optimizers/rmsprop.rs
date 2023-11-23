@@ -49,12 +49,12 @@ impl Optimizer for RMSProp {
 
         w_step_sizes = w_step_sizes.component_mul(&errors);
 
-        let weights_ref = layer.get_weights_reference();
+        let weights_ref = layer.get_weights_mut_reference();
         *weights_ref -= w_step_sizes.map(|x| x / batch_size as f32);
 
         b_step_sizes = b_step_sizes.component_mul(&deltas);
 
-        let biases_ref = layer.get_biases_reference();
+        let biases_ref = layer.get_biases_mut_reference();
         *biases_ref -= b_step_sizes.map(|x| x / batch_size as f32);
     }
 }
