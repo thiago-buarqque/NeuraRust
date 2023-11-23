@@ -1,9 +1,11 @@
+use std::collections::HashMap;
+
 use nalgebra::DMatrix;
 
 use super::optimizer::Optimizer;
 
 pub struct RMSProp {
-    decay_rate: f64,
+    decay_rate: f32,
 }
 
 impl Optimizer for RMSProp {
@@ -11,15 +13,15 @@ impl Optimizer for RMSProp {
         let input_dim = layer.get_input_dim();
         let output_dim = layer.get_output_dim();
 
-        let optimizer_params = layer.get_optimizer_params();
+        let optimizer_params = layer.get_optimizer_params_mut_reference();
 
         optimizer_params.insert(
             "weights_moving_avg".to_string(),
-            DMatrix::zeros(input_dim, output_dim),
+            DMatrix::zeros(output_dim, input_dim),
         );
         optimizer_params.insert(
             "biases_moving_avg".to_string(),
-            DMatrix::zeros(1, output_dim),
+            DMatrix::zeros(output_dim, 1),
         );
     }
 
@@ -27,79 +29,68 @@ impl Optimizer for RMSProp {
         &mut self,
         batch_size: usize,
         layer: &mut crate::core::layer::Layer,
-        learning_rate: f64,
+        learning_rate: f32,
     ) {
-        let (weights_moving_avg, biases_moving_avg) = self.calculate_moving_avg(layer);
+        self.calculate_moving_avg(layer);
 
         let mut errors = layer.get_errors_clone();
-
-        errors /= batch_size as f64;
-        errors.scale_mut(learning_rate);
-        errors = errors.component_div(&weights_moving_avg.map(|x| (x + 1e-8).sqrt()));
-
-        let weights_ref = layer.get_weights_reference();
-        *weights_ref -= errors;
-
         let mut deltas = layer.get_deltas_clone();
 
-        deltas /= batch_size as f64;
-        deltas.scale_mut(learning_rate);
-        deltas = deltas.component_div(&biases_moving_avg.map(|x| (x + 1e-8).sqrt()));
+        let (weights_moving_avg, biases_moving_avg) = {
+            let optimizer_params = layer.get_optimizer_params_reference();
+            (
+                optimizer_params.get("weights_moving_avg").unwrap(),
+                optimizer_params.get("biases_moving_avg").unwrap(),
+            )
+        };
+
+        let mut w_step_sizes = weights_moving_avg.map(|x| learning_rate / (x + 1e-8).sqrt());
+        let mut b_step_sizes = biases_moving_avg.map(|x| learning_rate / (x + 1e-8).sqrt());
+
+        w_step_sizes = w_step_sizes.component_mul(&errors);
+
+        let weights_ref = layer.get_weights_reference();
+        *weights_ref -= w_step_sizes.map(|x| x / batch_size as f32);
+
+        b_step_sizes = b_step_sizes.component_mul(&deltas);
 
         let biases_ref = layer.get_biases_reference();
-        *biases_ref -= deltas;
-    }
-
-    fn save_mid_epoch_params(
-        &mut self,
-        deltas: &nalgebra::DMatrix<f64>,
-        errors: &nalgebra::DMatrix<f64>,
-    ) {
-        todo!()
+        *biases_ref -= b_step_sizes.map(|x| x / batch_size as f32);
     }
 }
 
 impl RMSProp {
-    pub fn new(decay_rate: f64) -> Self {
+    pub fn new(decay_rate: f32) -> Self {
         Self { decay_rate }
     }
-    fn calculate_moving_avg(
-        &mut self,
-        layer: &mut crate::core::layer::Layer,
-    ) -> (DMatrix<f64>, DMatrix<f64>) {
-        let mut errors = layer.get_errors_clone();
-        let mut deltas = layer.get_deltas_clone();
+    fn calculate_moving_avg(&mut self, layer: &mut crate::core::layer::Layer) {
+        let errors = layer.get_errors_clone();
+        let deltas = layer.get_deltas_clone();
 
-        let optimizer_params = layer.get_optimizer_params();
+        let mut optimizer_params = layer.get_optimizer_params_mut_reference();
 
-        let mut weights_moving_avg = match optimizer_params.get("weights_moving_avg") {
-            Some(data) => data.clone(),
-            None => DMatrix::zeros(0, 0),
-        };
+        let weights_moving_avg =
+            self.update_moving_avg(&mut optimizer_params, "weights_moving_avg", errors);
 
-        weights_moving_avg.scale_mut(self.decay_rate);
+        let biases_moving_avg =
+            self.update_moving_avg(&mut optimizer_params, "biases_moving_avg", deltas);
+    }
 
-        errors = errors.map(|x| x * x);
-        errors.scale_mut(1.0 - self.decay_rate);
+    fn update_moving_avg(
+        &self,
+        optimizer_params: &mut HashMap<String, DMatrix<f32>>,
+        key: &str,
+        data: DMatrix<f32>,
+    ) {
+        if let Some(mut moving_avg) = optimizer_params.remove(key) {
+            moving_avg.scale_mut(self.decay_rate);
 
-        weights_moving_avg += errors;
+            let mut squared_gradients = data.map(|x| x.powi(2));
+            squared_gradients.scale_mut(1.0 - self.decay_rate);
 
-        optimizer_params.insert("weights_moving_avg".to_string(), weights_moving_avg.clone());
+            moving_avg += squared_gradients;
 
-        let mut biases_moving_avg = match optimizer_params.get("biases_moving_avg") {
-            Some(data) => data.clone(),
-            None => DMatrix::zeros(0, 0),
-        };
-
-        biases_moving_avg.scale_mut(self.decay_rate);
-
-        deltas = deltas.map(|x| x * x);
-        deltas.scale_mut(1.0 - self.decay_rate);
-
-        biases_moving_avg += deltas;
-
-        optimizer_params.insert("biases_moving_avg".to_string(), biases_moving_avg.clone());
-
-        (weights_moving_avg, biases_moving_avg)
+            optimizer_params.insert(key.to_string(), moving_avg);
+        }
     }
 }

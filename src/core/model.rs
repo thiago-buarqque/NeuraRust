@@ -10,15 +10,15 @@ use super::layer::Layer;
 
 pub struct Model {
     layers: Vec<Layer>,
-    loss: fn(&DMatrix<f64>, &DMatrix<f64>) -> f64,
-    loss_derivative: fn(&DMatrix<f64>, &DMatrix<f64>) -> DMatrix<f64>,
+    loss: fn(&DMatrix<f32>, &DMatrix<f32>) -> f32,
+    loss_derivative: fn(&DMatrix<f32>, &DMatrix<f32>) -> DMatrix<f32>,
 }
 
 impl Model {
     pub fn new(
         layers: Vec<Layer>,
-        loss: fn(&DMatrix<f64>, &DMatrix<f64>) -> f64,
-        loss_derivative: fn(&DMatrix<f64>, &DMatrix<f64>) -> DMatrix<f64>,
+        loss: fn(&DMatrix<f32>, &DMatrix<f32>) -> f32,
+        loss_derivative: fn(&DMatrix<f32>, &DMatrix<f32>) -> DMatrix<f32>,
     ) -> Self {
         Self {
             layers,
@@ -40,11 +40,11 @@ impl Model {
         &mut self,
         batch_size: usize,
         epochs: usize,
-        learning_rate: f64,
+        learning_rate: f32,
         metrics: Vec<String>,
         optimizer: &mut dyn Optimizer,
-        x: Vec<DMatrix<f64>>,
-        y: Vec<DMatrix<f64>>,
+        x: Vec<DMatrix<f32>>,
+        y: Vec<DMatrix<f32>>,
     ) {
         let mut x = x.clone();
         let mut y = y.clone();
@@ -59,27 +59,32 @@ impl Model {
             let batches = x.chunks(batch_size).zip(y.chunks(batch_size));
 
             let mut epoch_predictions = Vec::with_capacity(x.len());
-            let mut epoch_loss = 0_f64;
+            let mut epoch_loss = 0_f32;
 
-            let progress_bar = ProgressBar::new(batches.len() as u64);
+            // let progress_bar = ProgressBar::new(batches.len() as u64);
 
-            progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-                .unwrap()
-                .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
-                .progress_chars("#>-"));
+            // progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            //     .unwrap()
+            //     .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f32()).unwrap())
+            //     .progress_chars("#>-"));
 
+            let mut first = true;
             for (input_batch, target_batch) in batches {
-                progress_bar.inc(1);
+                // progress_bar.inc(1);
 
-                let mut batch_loss = 0_f64;
+                let mut batch_loss = 0_f32;
+
+                self.layers
+                    .iter_mut()
+                    .for_each(|layer| layer.clear_error_and_delta());
 
                 for (input_data, target_data) in input_batch.iter().zip(target_batch.iter()) {
                     let mut prediction = self.evaluate(input_data);
 
-                    if prediction.len() == 1 {
-                        // Binary classification
-                        prediction = prediction.map(|x| if x > 0.5 { 1.0 } else { 0.0 })
-                    }
+                    // if prediction.len() == 1 {
+                    //     // Binary classification
+                    //     prediction = prediction.map(|x| if x > 0.5 { 1.0 } else { 0.0 })
+                    // }
 
                     batch_loss += (self.loss)(target_data, &prediction);
 
@@ -92,28 +97,26 @@ impl Model {
                     optimizer.update_params(input_batch.len(), layer, learning_rate)
                 });
 
-                epoch_loss += batch_loss / input_batch.len() as f64;
-                progress_bar.set_message(format!("Batch loss: {}", batch_loss));
+                epoch_loss += batch_loss as f32;
+                // progress_bar.set_message(format!("Batch loss: {}", batch_loss));
             }
 
-            progress_bar.finish();
+            // progress_bar.finish();
 
-            print!(
-                "({}) Loss: {} ",
-                epoch,
-                epoch_loss / (x.len() as f64 / batch_size as f64)
-            );
+            if epoch % 5 == 0 {
+                print!("({}) Loss: {} ", epoch, epoch_loss / x.len() as f32);
 
-            print_metrics(epoch_predictions, &metrics, &y);
-            println!()
+                print_metrics(epoch_predictions, &metrics, &y);
+                println!()
+            }
         }
     }
 
     fn backpropagation(
         &mut self,
-        expected: &DMatrix<f64>,
-        network_input: &DMatrix<f64>,
-        predicted: &DMatrix<f64>,
+        expected: &DMatrix<f32>,
+        network_input: &DMatrix<f32>,
+        predicted: &DMatrix<f32>,
     ) {
         let mut next_layer_delta = (self.loss_derivative)(&expected, &predicted);
 
@@ -141,7 +144,7 @@ impl Model {
         }
     }
 
-    pub fn evaluate(&mut self, data: &DMatrix<f64>) -> DMatrix<f64> {
+    pub fn evaluate(&mut self, data: &DMatrix<f32>) -> DMatrix<f32> {
         let mut last_output = data;
 
         self.layers
