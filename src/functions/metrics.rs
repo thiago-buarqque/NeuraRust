@@ -11,12 +11,19 @@ pub struct ClassConfusionMatrix {
 impl ClassConfusionMatrix {
     pub fn new(confusion_matrix: &DMatrix<usize>, class_index: usize) -> Self {
         let true_positives = confusion_matrix[(class_index, class_index)];
-        let false_positives = confusion_matrix.column(class_index).sum() - true_positives;
-        let false_negatives = confusion_matrix.row(class_index).sum() - true_positives;
+
+        let column_sum = confusion_matrix.column(class_index).sum();
+
+        let false_positives = column_sum - true_positives;
+
+        let row_sum = confusion_matrix.row(class_index).sum();
+
+        let false_negatives = row_sum - true_positives;
+
         let true_negatives = confusion_matrix.sum()
-            - confusion_matrix.column(class_index).sum()
-            - confusion_matrix.row(class_index).sum()
-            + true_positives;
+            + true_positives
+            - column_sum
+            - row_sum;
 
         ClassConfusionMatrix {
             false_negatives,
@@ -35,31 +42,31 @@ impl ClassConfusionMatrix {
         }
     }
 
-    pub fn accuracy(&self) -> f64 {
-        (self.true_positives + self.true_negatives) as f64
+    pub fn accuracy(&self) -> f32 {
+        (self.true_positives + self.true_negatives) as f32
             / (self.true_positives
                 + self.true_negatives
                 + self.false_positives
-                + self.false_negatives) as f64
+                + self.false_negatives) as f32
     }
 
-    pub fn precision(&self) -> f64 {
+    pub fn precision(&self) -> f32 {
         if self.true_positives + self.false_positives == 0 {
             0.0
         } else {
-            self.true_positives as f64 / (self.true_positives + self.false_positives) as f64
+            self.true_positives as f32 / (self.true_positives + self.false_positives) as f32
         }
     }
 
-    pub fn recall(&self) -> f64 {
+    pub fn recall(&self) -> f32 {
         if self.true_positives + self.false_negatives == 0 {
             0.0
         } else {
-            self.true_positives as f64 / (self.true_positives + self.false_negatives) as f64
+            self.true_positives as f32 / (self.true_positives + self.false_negatives) as f32
         }
     }
 
-    pub fn f1_score(&self) -> f64 {
+    pub fn f1_score(&self) -> f32 {
         let precision = self.precision();
         let recall = self.recall();
 
@@ -81,26 +88,25 @@ impl ClassConfusionMatrix {
 }
 
 pub fn calculate_confusion_matrix(
-    predictions: &Vec<DMatrix<f64>>,
-    targets: &Vec<DMatrix<f64>>,
+    predictions: &Vec<DMatrix<f32>>,
+    targets: &Vec<DMatrix<f32>>,
 ) -> DMatrix<usize> {
-    let num_classes = predictions.first().unwrap().ncols();
+    let num_classes = predictions.first().unwrap().nrows();
 
     let mut confusion_matrix = DMatrix::zeros(num_classes, num_classes);
 
     for (act_matrix, exp_matrix) in predictions.iter().zip(targets.iter()) {
         let predicted_class = determine_predicted_class(act_matrix);
-        let actual_class = determine_actual_class(exp_matrix);
+        let exp_class = determine_actual_class(exp_matrix);
 
-        confusion_matrix[(actual_class, predicted_class)] += 1;
+        confusion_matrix[(exp_class, predicted_class)] += 1;
     }
 
     confusion_matrix
 }
 
-fn determine_predicted_class(matrix: &DMatrix<f64>) -> usize {
+fn determine_predicted_class(matrix: &DMatrix<f32>) -> usize {
     matrix
-        .row(0)
         .iter()
         .enumerate()
         .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
@@ -108,9 +114,8 @@ fn determine_predicted_class(matrix: &DMatrix<f64>) -> usize {
         .0
 }
 
-fn determine_actual_class(matrix: &DMatrix<f64>) -> usize {
+fn determine_actual_class(matrix: &DMatrix<f32>) -> usize {
     matrix
-        .row(0)
         .iter()
         .enumerate()
         .find(|&(_, &value)| value == 1.0)
@@ -119,49 +124,58 @@ fn determine_actual_class(matrix: &DMatrix<f64>) -> usize {
 }
 
 pub fn print_metrics(
-    epoch_predictions: Vec<DMatrix<f64>>,
+    epoch_predictions: Vec<DMatrix<f32>>,
     metrics: &Vec<String>,
-    y: &Vec<DMatrix<f64>>,
+    y: &Vec<DMatrix<f32>>,
 ) {
     let confusion_matrix = calculate_confusion_matrix(&epoch_predictions, y);
+
+    // println!("Confusion matrix: {}", confusion_matrix);
 
     let class_confusion_matrices = get_class_confusion_matrices(&confusion_matrix);
 
     metrics.iter().for_each(|metric| {
-        let mut score: f64 = 0.0;
+        let mut score: f32 = 0.0;
 
         if metric.eq_ignore_ascii_case("accuracy") {
             let total_correct_predictions = confusion_matrix.diagonal().sum();
             let total_predictions = confusion_matrix.sum();
-            score = total_correct_predictions as f64 / total_predictions as f64;
-        }
+            score = total_correct_predictions as f32 / total_predictions as f32;
 
-        if metric.eq_ignore_ascii_case("precision") {
-            score = class_confusion_matrices
-                .iter()
-                .map(|cm| cm.precision())
-                .sum::<f64>();
+            print!(
+                " {}: {:.0}%",
+                metric,
+                (score) * 100.0
+            );
         }
+        else {
+            if metric.eq_ignore_ascii_case("precision") {
+                score = class_confusion_matrices
+                    .iter()
+                    .map(|cm| cm.precision())
+                    .sum::<f32>();
+            }
 
-        if metric.eq_ignore_ascii_case("recall") {
-            score = class_confusion_matrices
-                .iter()
-                .map(|cm| cm.recall())
-                .sum::<f64>();
+            if metric.eq_ignore_ascii_case("recall") {
+                score = class_confusion_matrices
+                    .iter()
+                    .map(|cm| cm.recall())
+                    .sum::<f32>();
+            }
+
+            if metric.eq_ignore_ascii_case("f1-score") {
+                score = class_confusion_matrices
+                    .iter()
+                    .map(|cm| cm.f1_score())
+                    .sum::<f32>();
+            }
+
+            print!(
+                " {}: {:.0}%",
+                metric,
+                (score / class_confusion_matrices.len() as f32) * 100.0
+            );
         }
-
-        if metric.eq_ignore_ascii_case("f1-score") {
-            score = class_confusion_matrices
-                .iter()
-                .map(|cm| cm.f1_score())
-                .sum::<f64>();
-        }
-
-        print!(
-            " {}: {:.0}%",
-            metric,
-            (score / class_confusion_matrices.len() as f64) * 100.0
-        );
     })
 }
 

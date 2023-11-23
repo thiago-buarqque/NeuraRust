@@ -54,7 +54,7 @@ mod tests {
 
         let total_correct_predictions = confusion_matrix.diagonal().sum();
         let total_predictions = confusion_matrix.sum();
-        let overall_accuracy = total_correct_predictions as f64 / total_predictions as f64;
+        let overall_accuracy = total_correct_predictions as f32 / total_predictions as f32;
 
         assert_eq!(0.75, overall_accuracy);
 
@@ -63,8 +63,8 @@ mod tests {
             class_confusion_matrices
                 .iter()
                 .map(|cm| cm.precision())
-                .sum::<f64>()
-                / class_confusion_matrices.len() as f64
+                .sum::<f32>()
+                / class_confusion_matrices.len() as f32
         );
 
         assert_eq!(
@@ -72,8 +72,8 @@ mod tests {
             class_confusion_matrices
                 .iter()
                 .map(|cm| cm.recall())
-                .sum::<f64>()
-                / class_confusion_matrices.len() as f64
+                .sum::<f32>()
+                / class_confusion_matrices.len() as f32
         );
 
         assert_eq!(
@@ -81,8 +81,8 @@ mod tests {
             class_confusion_matrices
                 .iter()
                 .map(|cm| cm.f1_score())
-                .sum::<f64>()
-                / class_confusion_matrices.len() as f64
+                .sum::<f32>()
+                / class_confusion_matrices.len() as f32
         );
     }
 }
