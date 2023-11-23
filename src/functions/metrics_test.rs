@@ -9,17 +9,17 @@ mod tests {
     #[test]
     fn test_calculate_confusion_matrix() {
         let y_pred = vec![
-            DMatrix::from_vec(1, 3, vec![0.05, 0.95, 0.2]),
-            DMatrix::from_vec(1, 3, vec![0.73, 0.55, 0.1]),
-            DMatrix::from_vec(1, 3, vec![0.1, 0.5, 0.95]),
-            DMatrix::from_vec(1, 3, vec![0.2, 0.4, 0.85]),
+            DMatrix::from_vec(3, 1, vec![0.05, 0.95, 0.2]),
+            DMatrix::from_vec(3, 1, vec![0.73, 0.55, 0.1]),
+            DMatrix::from_vec(3, 1, vec![0.1, 0.5, 0.95]),
+            DMatrix::from_vec(3, 1, vec![0.2, 0.4, 0.85]),
         ];
 
         let y_true = vec![
-            DMatrix::from_vec(1, 3, vec![0.0, 1.0, 0.0]),
-            DMatrix::from_vec(1, 3, vec![1.0, 0.0, 0.0]),
-            DMatrix::from_vec(1, 3, vec![0.0, 0.0, 1.0]),
-            DMatrix::from_vec(1, 3, vec![0.0, 1.0, 0.0]),
+            DMatrix::from_vec(3, 1, vec![0.0, 1.0, 0.0]),
+            DMatrix::from_vec(3, 1, vec![1.0, 0.0, 0.0]),
+            DMatrix::from_vec(3, 1, vec![0.0, 0.0, 1.0]),
+            DMatrix::from_vec(3, 1, vec![0.0, 1.0, 0.0]),
         ];
 
         let confusion_matrix = calculate_confusion_matrix(&y_pred, &y_true);
@@ -77,7 +77,7 @@ mod tests {
         );
 
         assert_eq!(
-            0.7777777777777777,
+            0.77777785,
             class_confusion_matrices
                 .iter()
                 .map(|cm| cm.f1_score())
