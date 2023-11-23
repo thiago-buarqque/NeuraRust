@@ -24,16 +24,13 @@ impl Layer {
         neurons: usize,
     ) -> Self {
         let mut r = rand::thread_rng();
-        // let mut r = StdRng::seed_from_u64(222);
-
-        let bound = (1.0/(input_dim as f32).sqrt());
-        let (lower, upper) = (-bound, bound);
+        let mut r = StdRng::seed_from_u64(222);
 
         let weights: Vec<f32> = (0..input_dim * neurons)
-            .map(|_| lower + r.gen_range(lower..upper) * (upper - lower))
+            .map(|_| r.gen_range(-0.5..0.5))
             .collect();
 
-        let biases: Vec<f32> = (0..neurons).map(|_| lower + r.gen_range(lower..upper) * (upper - lower)).collect();
+        let biases: Vec<f32> = (0..neurons).map(|_| r.gen_range(-0.5..0.5)).collect();
 
         Self {
             activation,
@@ -82,6 +79,7 @@ impl Layer {
         next_layer_weights: &DMatrix<f32>,
         previous_layer_output: &DMatrix<f32>,
     ) -> DMatrix<f32> {
+        // https://sudeepraja.github.io/Neural/
         let activation_derivative = (self.activation_derivative)(&self.last_raw_output);
 
         let deltas = if last_layer {
@@ -130,8 +128,12 @@ impl Layer {
         self.deltas = DMatrix::zeros(0, 0);
     }
 
-    pub fn get_optimizer_params(&mut self) -> &mut HashMap<String, DMatrix<f32>> {
+    pub fn get_optimizer_params_mut_reference(&mut self) -> &mut HashMap<String, DMatrix<f32>> {
         &mut self.optimizer_params
+    }
+
+    pub fn get_optimizer_params_reference(&self) -> &HashMap<String, DMatrix<f32>> {
+        &self.optimizer_params
     }
 
     pub fn get_last_output(&self) -> DMatrix<f32> {
@@ -163,10 +165,10 @@ impl Layer {
     }
 
     pub fn get_input_dim(&self) -> usize {
-        self.weights.shape().0
+        self.weights.shape().1
     }
 
     pub fn get_output_dim(&self) -> usize {
-        self.weights.shape().1
+        self.weights.shape().0
     }
 }

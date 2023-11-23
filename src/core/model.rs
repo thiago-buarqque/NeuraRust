@@ -54,7 +54,7 @@ impl Model {
             .for_each(|layer| optimizer.initialize_layer_additional_params(layer));
 
         for epoch in 0..epochs {
-            // Self::shuffle_dataset(&mut x, &mut y);
+            Self::shuffle_dataset(&mut x, &mut y);
 
             let batches = x.chunks(batch_size).zip(y.chunks(batch_size));
 
@@ -68,6 +68,7 @@ impl Model {
             //     .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f32()).unwrap())
             //     .progress_chars("#>-"));
 
+            let mut first = true;
             for (input_batch, target_batch) in batches {
                 // progress_bar.inc(1);
 
@@ -80,12 +81,10 @@ impl Model {
                 for (input_data, target_data) in input_batch.iter().zip(target_batch.iter()) {
                     let mut prediction = self.evaluate(input_data);
 
-                    if prediction.len() == 1 {
-                        // Binary classification
-                        prediction = prediction.map(|x| if x > 0.5 { 1.0 } else { 0.0 })
-                    }
-
-                    println!(" Pred: {:?} Exp: {:?}", prediction.data.as_vec(), target_data.data.as_vec());
+                    // if prediction.len() == 1 {
+                    //     // Binary classification
+                    //     prediction = prediction.map(|x| if x > 0.5 { 1.0 } else { 0.0 })
+                    // }
 
                     batch_loss += (self.loss)(target_data, &prediction);
 
@@ -94,24 +93,22 @@ impl Model {
                     epoch_predictions.push(prediction);
                 }
 
-                // self.layers.iter_mut().for_each(|layer| {
-                //     optimizer.update_params(input_batch.len(), layer, learning_rate)
-                // });
-
                 self.layers.iter_mut().for_each(|layer| {
-                    layer.update_params(learning_rate, batch_size)
+                    optimizer.update_params(input_batch.len(), layer, learning_rate)
                 });
 
-                epoch_loss += batch_loss / input_batch.len() as f32;
+                epoch_loss += batch_loss as f32;
                 // progress_bar.set_message(format!("Batch loss: {}", batch_loss));
             }
 
             // progress_bar.finish();
 
-            print!("({}) Loss: {} ", epoch, epoch_loss);
+            if epoch % 5 == 0 {
+                print!("({}) Loss: {} ", epoch, epoch_loss / x.len() as f32);
 
-            // print_metrics(epoch_predictions, &metrics, &y);
-            println!()
+                print_metrics(epoch_predictions, &metrics, &y);
+                println!()
+            }
         }
     }
 

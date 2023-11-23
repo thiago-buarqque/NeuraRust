@@ -41,15 +41,15 @@ mod tests {
         let hidden_layer = Layer::from(
             sigmoid,
             sigmoid_derivative,
-            DMatrix::from_vec(1, 2, vec![0.35, 0.35]),
-            DMatrix::from_vec(2, 2, vec![0.15, 0.25, 0.20, 0.30]),
+            DMatrix::from_vec(2, 1, vec![0.35, 0.35]),
+            DMatrix::from_vec(2, 2, vec![0.15, 0.20, 0.25, 0.30]),
         );
 
         let output_layer = Layer::from(
             sigmoid,
             sigmoid_derivative,
-            DMatrix::from_vec(1, 2, vec![0.60, 0.60]),
-            DMatrix::from_vec(2, 2, vec![0.40, 0.50, 0.45, 0.55]),
+            DMatrix::from_vec(2, 1, vec![0.60, 0.60]),
+            DMatrix::from_vec(2, 2, vec![0.40, 0.45, 0.50, 0.55]),
         );
 
         let mut model = Model::new(
@@ -58,7 +58,7 @@ mod tests {
             squared_error_derivative,
         );
 
-        let data = DMatrix::from_vec(1, 2, vec![0.05, 0.10]);
+        let data = DMatrix::from_vec(2, 1, vec![0.05, 0.10]);
 
         // Output from hidden is Matrix1x3::new(1.5, 1.1, 1.7)
 
@@ -71,7 +71,7 @@ mod tests {
             vec![],
             &mut rmsprop,
             vec![data.clone()],
-            vec![DMatrix::from_vec(1, 2, vec![0.01, 0.99])],
+            vec![DMatrix::from_vec(2, 1, vec![0.01, 0.99])],
         );
 
         let output = model.evaluate(&data);
