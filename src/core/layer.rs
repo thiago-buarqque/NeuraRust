@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rand::{Rng, rngs::StdRng, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use nalgebra::DMatrix;
 
@@ -24,7 +24,7 @@ impl Layer {
         neurons: usize,
     ) -> Self {
         let mut r = rand::thread_rng();
-        let mut r = StdRng::seed_from_u64(222);
+        // let mut r = StdRng::seed_from_u64(222);
 
         let weights: Vec<f32> = (0..input_dim * neurons)
             .map(|_| r.gen_range(-0.5..0.5))
@@ -36,12 +36,12 @@ impl Layer {
             activation,
             activation_derivative,
             biases: DMatrix::from_row_slice(neurons, 1, &biases),
-            deltas: DMatrix::zeros(0, 0),
-            errors: DMatrix::zeros(0, 0),
+            deltas: DMatrix::zeros(neurons, 1),
+            errors: DMatrix::zeros(neurons, input_dim),
             last_activated_output: DMatrix::identity(1, 1),
             last_raw_output: DMatrix::identity(1, 1),
             optimizer_params: HashMap::new(),
-            weights: DMatrix::from_row_slice(neurons, input_dim , &weights),
+            weights: DMatrix::from_row_slice(neurons, input_dim, &weights),
         }
     }
 
@@ -55,8 +55,8 @@ impl Layer {
             activation,
             activation_derivative,
             biases,
-            deltas: DMatrix::zeros(0, 0),
-            errors: DMatrix::zeros(0, 0),
+            deltas: DMatrix::zeros(weights.nrows(), 1),
+            errors: DMatrix::zeros(weights.nrows(), weights.ncols()),
             last_activated_output: DMatrix::identity(1, 1),
             last_raw_output: DMatrix::identity(1, 1),
             optimizer_params: HashMap::new(),
@@ -73,38 +73,33 @@ impl Layer {
     }
 
     pub fn propagate_error(
-        &mut self,
+        &self,
         last_layer: bool,
         next_layer_delta: &DMatrix<f32>,
         next_layer_weights: &DMatrix<f32>,
         previous_layer_output: &DMatrix<f32>,
-    ) -> DMatrix<f32> {
+    ) -> (DMatrix<f32>, DMatrix<f32>) {
         // https://sudeepraja.github.io/Neural/
         let activation_derivative = (self.activation_derivative)(&self.last_raw_output);
 
         let deltas = if last_layer {
-            activation_derivative
-                .component_mul(&next_layer_delta)
+            activation_derivative.component_mul(&next_layer_delta)
         } else {
             let next_layer_weighted_error = next_layer_weights.transpose() * next_layer_delta;
 
-            next_layer_weighted_error
-                .component_mul(&activation_derivative)
+            next_layer_weighted_error.component_mul(&activation_derivative)
         };
 
-        if self.errors.is_empty() {
-            self.errors = (&deltas * previous_layer_output.transpose());
-        } else {
-            self.errors += (&deltas * previous_layer_output.transpose());
-        }
+        (&deltas * previous_layer_output.transpose(), deltas)
+    }
 
-        if self.deltas.is_empty() {
-            self.deltas = deltas.clone();
-        } else {
-            self.deltas += deltas.clone();
-        }
-
-        deltas
+    pub fn sum_errors_and_deltas(
+        &mut self,
+        deltas: &DMatrix<f32>,
+        errors: &DMatrix<f32>,
+    ) {
+        self.errors += errors;
+        self.deltas += deltas;
     }
 
     pub fn update_params(&mut self, learning_rate: f32, batch_size: usize) {
@@ -124,8 +119,8 @@ impl Layer {
     }
 
     pub fn clear_error_and_delta(&mut self) {
-        self.errors = DMatrix::zeros(0, 0);
-        self.deltas = DMatrix::zeros(0, 0);
+        self.deltas = DMatrix::zeros(self.weights.nrows(), 1);
+        self.errors = DMatrix::zeros(self.weights.nrows(), self.weights.ncols());
     }
 
     pub fn get_optimizer_params_mut_reference(&mut self) -> &mut HashMap<String, DMatrix<f32>> {
@@ -136,12 +131,16 @@ impl Layer {
         &self.optimizer_params
     }
 
-    pub fn get_last_output(&self) -> DMatrix<f32> {
-        self.last_activated_output.clone()
+    pub fn get_last_output(&self) -> &DMatrix<f32> {
+        &self.last_activated_output
     }
 
-    pub fn get_biases(&self) -> DMatrix<f32> {
+    pub fn get_biases_clone(&self) -> DMatrix<f32> {
         self.biases.clone()
+    }
+
+    pub fn get_weights_clone(&self) -> DMatrix<f32> {
+        self.weights.clone()
     }
 
     pub fn get_deltas_clone(&self) -> DMatrix<f32> {
@@ -152,16 +151,20 @@ impl Layer {
         self.errors.clone()
     }
 
-    pub fn get_biases_reference(&mut self) -> &mut DMatrix<f32> {
+    pub fn get_biases_mut_reference(&mut self) -> &mut DMatrix<f32> {
         &mut self.biases
     }
 
-    pub fn get_weights_reference(&mut self) -> &mut DMatrix<f32> {
+    pub fn get_weights_mut_reference(&mut self) -> &mut DMatrix<f32> {
         &mut self.weights
     }
 
-    pub fn get_weights(&self) -> DMatrix<f32> {
-        self.weights.clone()
+    pub fn get_biases_reference(&self) -> &DMatrix<f32> {
+        &self.biases
+    }
+
+    pub fn get_weights_reference(&self) -> &DMatrix<f32> {
+        &self.weights
     }
 
     pub fn get_input_dim(&self) -> usize {
