@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use rand_distr::{Normal, Distribution};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use nalgebra::DMatrix;
@@ -26,11 +27,17 @@ impl Layer {
         let mut r = rand::thread_rng();
         // let mut r = StdRng::seed_from_u64(222);
 
-        let weights: Vec<f32> = (0..input_dim * neurons)
-            .map(|_| r.gen_range(-0.5..0.5))
-            .collect();
+        let normal = Normal::new(0.0_f32, 1.0_f32).unwrap();
+        
+        let mut weights_sample: Vec<f32> = normal.sample_iter(&mut rand::thread_rng()).take(input_dim * neurons).collect();
 
-        let biases: Vec<f32> = (0..neurons).map(|_| r.gen_range(-0.5..0.5)).collect();
+        let std = (2.0_f32 / input_dim as f32).sqrt();
+
+        let weights: Vec<f32> = weights_sample.iter().map(|x| x * std).collect();
+
+        let mut biases_sample: Vec<f32> = normal.sample_iter(&mut rand::thread_rng()).take(neurons).collect();
+
+        let biases: Vec<f32> = biases_sample.iter().map(|x| x * std).collect();
 
         Self {
             activation,
