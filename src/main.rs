@@ -86,25 +86,15 @@ fn main() {
             println!("Loaded data x = {} y = {})", x.len(), y.len());
             println!("y = {:?}", y[0]);
 
-            // if let Err(e) = write_csv(
-            //     "./my_mnist_train.csv",
-            //     x.iter()
-            //         .map(|x| x.data.as_vec()
-            //         .iter()
-            //         .map(|x| x.to_string()).collect()).collect(),
-            // ) {
-            //     eprintln!("CSV write error: {}", e);
-            // }
+            let hidden_layer1 = Layer::new(relu, relu_derivative, x[0].len(), 512);
 
-            let hidden_layer1 = Layer::new(relu, relu_derivative, x[0].len(), 128);
-
-            let hidden_layer2 = Layer::new(relu, relu_derivative, 128, 64);
+            let hidden_layer2 = Layer::new(relu, relu_derivative, 512, 512);
 
             // let hidden_layer3 = Layer::new(relu, relu_derivative, 1024, 512);
 
             // let hidden_layer4 = Layer::new(relu, relu_derivative, 512, 128);
 
-            let output_layer = Layer::new(softmax, softmax_derivative, 64, y[0].len());
+            let output_layer = Layer::new(softmax, softmax_derivative, 512, y[0].len());
 
             let mut model = Model::new(
                 vec![
@@ -122,7 +112,7 @@ fn main() {
 
             model.fit(
                 128,
-                100,
+                10,
                 0.001,
                 vec![
                     "accuracy".to_string(),
