@@ -94,12 +94,12 @@ impl Model {
 
             // progress_bar.finish();
 
-            if epoch % 5 == 0 {
+            // if epoch % 5 == 0 {
                 print!("({}) Loss: {} ", epoch, epoch_loss / x.len() as f32);
 
                 print_metrics(epoch_predictions, &metrics, &y);
                 println!()
-            }
+            // }
         }
     }
 

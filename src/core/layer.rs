@@ -25,7 +25,7 @@ impl Layer {
         neurons: usize,
     ) -> Self {
         let mut r = rand::thread_rng();
-        // let mut r = StdRng::seed_from_u64(222);
+        let mut r = StdRng::seed_from_u64(222);
 
         let normal = Normal::new(0.0_f32, 1.0_f32).unwrap();
         
