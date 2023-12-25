@@ -150,4 +150,35 @@ impl Model {
 
         last_output.clone()
     }
+
+    pub fn test(&mut self, metrics: Vec<String>, x: &Vec<DMatrix<f32>>, y: &Vec<DMatrix<f32>>) {
+        let mut loss = 0_f32;
+        let mut predictions = Vec::with_capacity(x.len());
+
+        // let progress_bar = ProgressBar::new(x.len() as u64);
+
+        // progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+        //     .unwrap()
+        //     .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f32()).unwrap())
+        //     .progress_chars("#>-"));
+
+        for (_x, _y) in x.iter().zip(y.iter()) {
+            // progress_bar.inc(1);
+
+            let mut prediction = self.evaluate(_x);
+
+            loss += (self.loss)(_y, &prediction);
+
+            predictions.push(prediction);
+
+            // progress_bar.set_message(format!("Batch loss: {}", loss));
+        }
+
+        // progress_bar.finish();
+
+        print!("Loss: {} ", loss / x.len() as f32);
+
+        print_metrics(predictions, &metrics, &y);
+        println!()
+    }
 }
