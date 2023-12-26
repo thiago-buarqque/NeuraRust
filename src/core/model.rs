@@ -61,15 +61,15 @@ impl Model {
             let mut epoch_predictions = Vec::with_capacity(x.len());
             let mut epoch_loss = 0_f32;
 
-            // let progress_bar = ProgressBar::new(batches.len() as u64);
+            let progress_bar = ProgressBar::new(batches.len() as u64);
 
-            // progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-            //     .unwrap()
-            //     .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f32()).unwrap())
-            //     .progress_chars("#>-"));
+            progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                .unwrap()
+                .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f32()).unwrap())
+                .progress_chars("#>-"));
 
             for (input_batch, target_batch) in batches {
-                // progress_bar.inc(1);
+                progress_bar.inc(1);
 
                 let mut batch_loss = 0_f32;
 
@@ -89,17 +89,15 @@ impl Model {
                 });
 
                 epoch_loss += batch_loss as f32;
-                // progress_bar.set_message(format!("Batch loss: {}", batch_loss));
+                progress_bar.set_message(format!("Batch loss: {}", batch_loss));
             }
 
-            // progress_bar.finish();
+            progress_bar.finish();
 
-            if epoch % 5 == 0 {
-                print!("({}) Loss: {} ", epoch, epoch_loss / x.len() as f32);
+            print!("({}) Loss: {} ", epoch, epoch_loss / x.len() as f32);
 
-                print_metrics(epoch_predictions, &metrics, &y);
-                println!()
-            }
+            print_metrics(epoch_predictions, &metrics, &y);
+            println!()
         }
     }
 
@@ -149,5 +147,23 @@ impl Model {
             .for_each(|layer| last_output = layer.forward(&last_output));
 
         last_output.clone()
+    }
+
+    pub fn test(&mut self, metrics: Vec<String>, x: &Vec<DMatrix<f32>>, y: &Vec<DMatrix<f32>>) {
+        let mut loss = 0_f32;
+        let mut predictions = Vec::with_capacity(x.len());
+
+        for (_x, _y) in x.iter().zip(y.iter()) {
+            let mut prediction = self.evaluate(_x);
+
+            loss += (self.loss)(_y, &prediction);
+
+            predictions.push(prediction);
+        }
+
+        print!("Loss: {} ", loss / x.len() as f32);
+
+        print_metrics(predictions, &metrics, &y);
+        println!()
     }
 }
