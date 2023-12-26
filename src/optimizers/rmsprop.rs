@@ -40,7 +40,7 @@ impl Optimizer for RMSProp {
             let optimizer_params = layer.get_optimizer_params_reference();
             (
                 optimizer_params.get("weights_moving_avg").unwrap(),
-                optimizer_params.get("biases_moving_avg").unwrap(),
+                optimizer_params.get("biases_moving_avg").unwrap()
             )
         };
 
@@ -64,28 +64,26 @@ impl RMSProp {
         Self { decay_rate }
     }
     fn calculate_moving_avg(&mut self, layer: &mut crate::core::layer::Layer) {
-        let errors = layer.get_errors_clone();
-        let deltas = layer.get_deltas_clone();
+        let mut errors = layer.get_errors_clone();
+        let mut deltas = layer.get_deltas_clone();
 
         let mut optimizer_params = layer.get_optimizer_params_mut_reference();
 
-        let weights_moving_avg =
-            self.update_moving_avg(&mut optimizer_params, "weights_moving_avg", errors);
+        self.update_moving_avg(&mut optimizer_params, "weights_moving_avg", &errors);
 
-        let biases_moving_avg =
-            self.update_moving_avg(&mut optimizer_params, "biases_moving_avg", deltas);
+        self.update_moving_avg(&mut optimizer_params, "biases_moving_avg", &deltas);
     }
 
     fn update_moving_avg(
         &self,
         optimizer_params: &mut HashMap<String, DMatrix<f32>>,
         key: &str,
-        data: DMatrix<f32>,
+        gradients: &DMatrix<f32>,
     ) {
         if let Some(mut moving_avg) = optimizer_params.remove(key) {
             moving_avg.scale_mut(self.decay_rate);
 
-            let mut squared_gradients = data.map(|x| x.powi(2));
+            let mut squared_gradients = gradients.map(|x| x.powi(2));
             squared_gradients.scale_mut(1.0 - self.decay_rate);
 
             moving_avg += squared_gradients;

@@ -86,7 +86,6 @@ impl Layer {
         next_layer_weights: &DMatrix<f32>,
         previous_layer_output: &DMatrix<f32>,
     ) -> (DMatrix<f32>, DMatrix<f32>) {
-        // https://sudeepraja.github.io/Neural/
         let activation_derivative = (self.activation_derivative)(&self.last_raw_output);
 
         let deltas = if last_layer {
