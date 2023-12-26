@@ -1,18 +1,11 @@
 #![allow(warnings)]
-use std::sync::{Mutex, Arc};
-use std::time::Instant;
-use std::{env, fs::File};
+use std::env;
+use std::sync::{Arc, Mutex};
 
-use csv::{self, Writer};
-use rayon::prelude::{IntoParallelIterator, ParallelBridge, ParallelIterator};
+use csv::{self};
 use std::error::Error;
-use std::io;
 use std::str::FromStr;
 
-use functions::{
-    activations::{sigmoid, sigmoid_derivative},
-    losses::{mse, mse_derivative},
-};
 use nalgebra::DMatrix;
 use optimizers::rmsprop::RMSProp;
 
@@ -20,12 +13,13 @@ use crate::{
     core::{layer::Layer, model::Model},
     functions::{
         activations::{relu, relu_derivative, softmax, softmax_derivative},
-        losses::{
-            binary_crossentropy, binary_crossentropy_derivative, categorical_crossentropy,
-            categorical_crossentropy_derivative,
-        },
+        losses::{categorical_crossentropy, categorical_crossentropy_derivative},
     },
 };
+
+use actix_cors::Cors;
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use serde::{Deserialize, Serialize};
 
 mod core;
 mod functions;
@@ -80,11 +74,7 @@ fn read_doodles(file_path: &str) -> Result<(Vec<DMatrix<f32>>, Vec<DMatrix<f32>>
             .map(|s| f32::from_str(s.trim()).unwrap() / 255.0)
             .collect();
 
-        x.push(DMatrix::from_vec(
-            numbers.len(),
-            1,
-            numbers,
-        ));
+        x.push(DMatrix::from_vec(numbers.len(), 1, numbers));
 
         let mut label = DMatrix::zeros(1, 10);
 
@@ -95,10 +85,6 @@ fn read_doodles(file_path: &str) -> Result<(Vec<DMatrix<f32>>, Vec<DMatrix<f32>>
 
     Ok((x, y))
 }
-
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
-use actix_cors::Cors;
-use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 struct MatrixData {
@@ -111,7 +97,10 @@ struct ApiResponse {
     accuracy: f32,
 }
 
-async fn upload_matrix(data: web::Json<MatrixData>, shared: web::Data<Arc<Mutex<Model>>>) -> impl Responder {
+async fn upload_matrix(
+    data: web::Json<MatrixData>,
+    shared: web::Data<Arc<Mutex<Model>>>,
+) -> impl Responder {
     let rows = data.matrix.len();
     let cols = if rows > 0 { data.matrix[0].len() } else { 0 };
     let mut matrix_elements = Vec::with_capacity(rows * cols);
@@ -129,7 +118,7 @@ async fn upload_matrix(data: web::Json<MatrixData>, shared: web::Data<Arc<Mutex<
     let prediction = locked_model.evaluate(&dmatrix);
 
     drop(locked_model);
-    
+
     // println!("Model predicted: {}", prediction);
     let prediction_vec = prediction.data.as_vec();
     let mut index_of_max: Option<usize> = prediction_vec
@@ -144,7 +133,7 @@ async fn upload_matrix(data: web::Json<MatrixData>, shared: web::Data<Arc<Mutex<
 
     HttpResponse::Ok().json(ApiResponse {
         prediction: index_of_max.unwrap() as f32,
-        accuracy: prediction_vec[index_of_max.unwrap()]
+        accuracy: prediction_vec[index_of_max.unwrap()],
     })
 }
 
@@ -152,33 +141,28 @@ async fn upload_matrix(data: web::Json<MatrixData>, shared: web::Data<Arc<Mutex<
 async fn main() -> std::io::Result<()> {
     env::set_var("RUST_BACKTRACE", "1");
 
-    // let file_path = "./mnist/mnist_train.csv";
-
-    let now = Instant::now();
-
-    let model = match (read_doodles("./doodles/train-quick-draw.csv"), read_doodles("./doodles/test-quick-draw.csv")) {
-        (Ok((x_train, y_train)), Ok(((x_test, y_test)))) => {
-            println!("Loaded data x_train = {} y_train = {} x_test = {} y_test = {})", x_train.len(), y_train.len(), x_test.len(), y_test.len());
+    let model = match (
+        read_doodles("./doodles/train-quick-draw.csv"),
+        read_doodles("./doodles/test-quick-draw.csv"),
+    ) {
+        (Ok((x_train, y_train)), Ok((x_test, y_test))) => {
+            println!(
+                "Loaded data x_train = {} y_train = {} x_test = {} y_test = {})",
+                x_train.len(),
+                y_train.len(),
+                x_test.len(),
+                y_test.len()
+            );
             println!("x[0] = {}", x_train[0]);
 
             let hidden_layer1 = Layer::new(relu, relu_derivative, x_train[0].len(), 512);
 
             let hidden_layer2 = Layer::new(relu, relu_derivative, 512, 512);
 
-            // let hidden_layer3 = Layer::new(relu, relu_derivative, 1024, 64);
-
-            // let hidden_layer4 = Layer::new(relu, relu_derivative, 64, 128);
-
             let output_layer = Layer::new(softmax, softmax_derivative, 512, y_train[0].len());
 
             let mut model = Model::new(
-                vec![
-                    hidden_layer1,
-                    hidden_layer2,
-                    // hidden_layer3,
-                    // hidden_layer4,
-                    output_layer,
-                ],
+                vec![hidden_layer1, hidden_layer2, output_layer],
                 categorical_crossentropy,
                 categorical_crossentropy_derivative,
             );
@@ -186,12 +170,12 @@ async fn main() -> std::io::Result<()> {
             let mut rmsprop = RMSProp::new(0.9);
 
             let metrics = vec![
-                    "accuracy".to_string(),
-                    "recall".to_string(),
-                    "f1-score".to_string(),
-                    "precision".to_string(),
-                ];
-            
+                "accuracy".to_string(),
+                "recall".to_string(),
+                "f1-score".to_string(),
+                "precision".to_string(),
+            ];
+
             model.fit(
                 128,
                 15,
@@ -202,7 +186,7 @@ async fn main() -> std::io::Result<()> {
                 y_train,
             );
 
-            println!("\nTesting results:\n");
+            println!("\nTest results:\n");
 
             model.test(metrics, &x_test, &y_test);
 
@@ -211,12 +195,12 @@ async fn main() -> std::io::Result<()> {
         _ => {
             println!("Error reading CSV file:");
             None
-        },
+        }
     };
 
     let shared_data = Arc::new(Mutex::new(model.unwrap()));
 
-    println!("Started server");
+    println!("Started API");
 
     HttpServer::new(move || {
         let cors = Cors::default()

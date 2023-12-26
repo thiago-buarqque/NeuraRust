@@ -74,7 +74,7 @@ impl Model {
                 let mut batch_loss = 0_f32;
 
                 for (input_data, target_data) in input_batch.iter().zip(target_batch.iter()) {
-                    let mut prediction = self.evaluate(input_data);
+                    let prediction = self.evaluate(input_data);
 
                     batch_loss += (self.loss)(target_data, &prediction);
 
@@ -110,7 +110,7 @@ impl Model {
         let mut next_layer_delta = (self.loss_derivative)(&expected, &predicted);
 
         let zeros = DMatrix::zeros(0, 0);
-        
+
         let mut next_layer_errors;
         for i in (0..self.layers.len()).rev() {
             let previous_layer_output = if i == 0 {
@@ -120,7 +120,6 @@ impl Model {
             };
 
             let last_layer = i == self.layers.len() - 1;
-
 
             let next_layer_weights = if last_layer {
                 &zeros
@@ -154,7 +153,7 @@ impl Model {
         let mut predictions = Vec::with_capacity(x.len());
 
         for (_x, _y) in x.iter().zip(y.iter()) {
-            let mut prediction = self.evaluate(_x);
+            let prediction = self.evaluate(_x);
 
             loss += (self.loss)(_y, &prediction);
 

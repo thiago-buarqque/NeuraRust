@@ -40,17 +40,9 @@ pub fn softmax_derivative(raw_output: &DMatrix<f32>) -> DMatrix<f32> {
 }
 
 pub fn relu(raw_output: &DMatrix<f32>) -> DMatrix<f32> {
-    raw_output.map(|x| if x > 0.0 {
-        x
-    } else {
-        0.0
-    })
+    raw_output.map(|x| if x > 0.0 { x } else { 0.0 })
 }
 
 pub fn relu_derivative(raw_output: &DMatrix<f32>) -> DMatrix<f32> {
-    raw_output.map(|x| if x > 0.0 {
-        1.0
-    } else {
-        0.0
-    })
+    raw_output.map(|x| if x > 0.0 { 1.0 } else { 0.0 })
 }

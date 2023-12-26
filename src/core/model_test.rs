@@ -4,11 +4,7 @@ mod tests {
 
     use crate::{
         core::{layer::Layer, model::Model},
-        functions::{
-            activations::{sigmoid, sigmoid_derivative},
-            losses::{mse, mse_derivative, squared_error, squared_error_derivative},
-        },
-        optimizers::rmsprop::RMSProp,
+        functions::losses::{mse, mse_derivative},
     };
 
     #[test]
@@ -33,5 +29,4 @@ mod tests {
 
         assert_eq!(model.evaluate(&data), DVector::from_vec(vec![1.0]));
     }
-
 }
