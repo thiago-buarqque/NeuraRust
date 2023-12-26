@@ -33,14 +33,14 @@ impl Optimizer for RMSProp {
     ) {
         self.calculate_moving_avg(layer);
 
-        let mut errors = layer.get_errors_clone();
-        let mut deltas = layer.get_deltas_clone();
+        let errors = layer.get_errors_clone();
+        let deltas = layer.get_deltas_clone();
 
         let (weights_moving_avg, biases_moving_avg) = {
             let optimizer_params = layer.get_optimizer_params_reference();
             (
                 optimizer_params.get("weights_moving_avg").unwrap(),
-                optimizer_params.get("biases_moving_avg").unwrap()
+                optimizer_params.get("biases_moving_avg").unwrap(),
             )
         };
 
@@ -64,8 +64,8 @@ impl RMSProp {
         Self { decay_rate }
     }
     fn calculate_moving_avg(&mut self, layer: &mut crate::core::layer::Layer) {
-        let mut errors = layer.get_errors_clone();
-        let mut deltas = layer.get_deltas_clone();
+        let errors = layer.get_errors_clone();
+        let deltas = layer.get_deltas_clone();
 
         let mut optimizer_params = layer.get_optimizer_params_mut_reference();
 

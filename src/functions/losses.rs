@@ -54,10 +54,17 @@ pub fn binary_crossentropy(y_true: &DMatrix<f32>, y_pred: &DMatrix<f32>) -> f32 
     loss / (y_true.nrows() * y_true.ncols()) as f32
 }
 
-pub fn binary_crossentropy_derivative(expected: &DMatrix<f32>, predicted: &DMatrix<f32>) -> DMatrix<f32> {
+pub fn binary_crossentropy_derivative(
+    expected: &DMatrix<f32>,
+    predicted: &DMatrix<f32>,
+) -> DMatrix<f32> {
     let mut derivatives = DMatrix::zeros(expected.nrows(), expected.ncols());
 
-    for ((y, y_hat), derivative) in expected.iter().zip(predicted.iter()).zip(derivatives.iter_mut()) {
+    for ((y, y_hat), derivative) in expected
+        .iter()
+        .zip(predicted.iter())
+        .zip(derivatives.iter_mut())
+    {
         *derivative = -(*y / *y_hat) + ((1.0 - *y) / (1.0 - *y_hat));
     }
 

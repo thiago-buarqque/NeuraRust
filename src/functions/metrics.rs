@@ -20,10 +20,7 @@ impl ClassConfusionMatrix {
 
         let false_negatives = row_sum - true_positives;
 
-        let true_negatives = confusion_matrix.sum()
-            + true_positives
-            - column_sum
-            - row_sum;
+        let true_negatives = confusion_matrix.sum() + true_positives - column_sum - row_sum;
 
         ClassConfusionMatrix {
             false_negatives,
@@ -40,14 +37,6 @@ impl ClassConfusionMatrix {
             true_negatives: 0,
             true_positives: 0,
         }
-    }
-
-    pub fn accuracy(&self) -> f32 {
-        (self.true_positives + self.true_negatives) as f32
-            / (self.true_positives
-                + self.true_negatives
-                + self.false_positives
-                + self.false_negatives) as f32
     }
 
     pub fn precision(&self) -> f32 {
@@ -142,13 +131,8 @@ pub fn print_metrics(
             let total_predictions = confusion_matrix.sum();
             score = total_correct_predictions as f32 / total_predictions as f32;
 
-            print!(
-                " {}: {:.0}%",
-                metric,
-                (score) * 100.0
-            );
-        }
-        else {
+            print!(" {}: {:.0}%", metric, (score) * 100.0);
+        } else {
             if metric.eq_ignore_ascii_case("precision") {
                 score = class_confusion_matrices
                     .iter()

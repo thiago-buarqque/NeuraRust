@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use rand_distr::{Normal, Distribution};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand_distr::{Distribution, Normal};
 
 use nalgebra::DMatrix;
 
@@ -24,18 +23,23 @@ impl Layer {
         input_dim: usize,
         neurons: usize,
     ) -> Self {
-        let mut r = rand::thread_rng();
         // let mut r = StdRng::seed_from_u64(222);
 
         let normal = Normal::new(0.0_f32, 1.0_f32).unwrap();
-        
-        let mut weights_sample: Vec<f32> = normal.sample_iter(&mut rand::thread_rng()).take(input_dim * neurons).collect();
+
+        let weights_sample: Vec<f32> = normal
+            .sample_iter(&mut rand::thread_rng())
+            .take(input_dim * neurons)
+            .collect();
 
         let std = (2.0_f32 / input_dim as f32).sqrt();
 
         let weights: Vec<f32> = weights_sample.iter().map(|x| x * std).collect();
 
-        let mut biases_sample: Vec<f32> = normal.sample_iter(&mut rand::thread_rng()).take(neurons).collect();
+        let biases_sample: Vec<f32> = normal
+            .sample_iter(&mut rand::thread_rng())
+            .take(neurons)
+            .collect();
 
         let biases: Vec<f32> = biases_sample.iter().map(|x| x * std).collect();
 
@@ -99,11 +103,7 @@ impl Layer {
         (&deltas * previous_layer_output.transpose(), deltas)
     }
 
-    pub fn sum_errors_and_deltas(
-        &mut self,
-        deltas: &DMatrix<f32>,
-        errors: &DMatrix<f32>,
-    ) {
+    pub fn sum_errors_and_deltas(&mut self, deltas: &DMatrix<f32>, errors: &DMatrix<f32>) {
         self.errors += errors;
         self.deltas += deltas;
     }
@@ -141,14 +141,6 @@ impl Layer {
         &self.last_activated_output
     }
 
-    pub fn get_biases_clone(&self) -> DMatrix<f32> {
-        self.biases.clone()
-    }
-
-    pub fn get_weights_clone(&self) -> DMatrix<f32> {
-        self.weights.clone()
-    }
-
     pub fn get_deltas_clone(&self) -> DMatrix<f32> {
         self.deltas.clone()
     }
@@ -163,10 +155,6 @@ impl Layer {
 
     pub fn get_weights_mut_reference(&mut self) -> &mut DMatrix<f32> {
         &mut self.weights
-    }
-
-    pub fn get_biases_reference(&self) -> &DMatrix<f32> {
-        &self.biases
     }
 
     pub fn get_weights_reference(&self) -> &DMatrix<f32> {

@@ -3,7 +3,7 @@ mod tests {
     use nalgebra::DMatrix;
 
     use crate::functions::metrics::{
-        calculate_confusion_matrix, get_class_confusion_matrices, ClassConfusionMatrix,
+        calculate_confusion_matrix, get_class_confusion_matrices,
     };
 
     #[test]
@@ -35,10 +35,6 @@ mod tests {
         let confusion_matrix = DMatrix::from_vec(3, 3, vec![1, 0, 0, 0, 1, 0, 0, 1, 1]);
 
         let class_confusion_matrices = get_class_confusion_matrices(&confusion_matrix);
-
-        assert_eq!(1.0, class_confusion_matrices[0].accuracy());
-        assert_eq!(0.75, class_confusion_matrices[1].accuracy());
-        assert_eq!(0.75, class_confusion_matrices[2].accuracy());
 
         assert_eq!(1.0, class_confusion_matrices[0].precision());
         assert_eq!(1.0, class_confusion_matrices[1].precision());

@@ -1,5 +1,3 @@
-use nalgebra::DMatrix;
-
 use crate::core::layer::Layer;
 
 pub trait Optimizer {
