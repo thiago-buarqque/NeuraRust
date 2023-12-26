@@ -61,14 +61,15 @@ impl Model {
             let mut epoch_predictions = Vec::with_capacity(x.len());
             let mut epoch_loss = 0_f32;
 
-            let progress_bar = ProgressBar::new(batches.len() as u64);
+            let batches_ammount = batches.len();
+            let progress_bar = ProgressBar::new(batches_ammount as u64);
 
-            progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+            progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg} [{wide_bar:.cyan/blue}] {pos}/{len} ({eta})")
                 .unwrap()
                 .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f32()).unwrap())
                 .progress_chars("#>-"));
 
-            for (input_batch, target_batch) in batches {
+            for (i, (input_batch, target_batch)) in batches.enumerate() {
                 progress_bar.inc(1);
 
                 let mut batch_loss = 0_f32;
@@ -88,13 +89,13 @@ impl Model {
                     layer.clear_error_and_delta()
                 });
 
-                epoch_loss += batch_loss as f32;
-                progress_bar.set_message(format!("Batch loss: {}", batch_loss));
+                epoch_loss += batch_loss / input_batch.len() as f32;
+                progress_bar.set_message(format!("Loss: {:.4}", epoch_loss / (i + 1) as f32));
             }
 
             progress_bar.finish();
 
-            print!("({}) Loss: {} ", epoch, epoch_loss / x.len() as f32);
+            print!("({}) Loss: {:.4} ", epoch, epoch_loss / batches_ammount as f32);
 
             print_metrics(epoch_predictions, &metrics, &y);
             println!()
@@ -160,7 +161,7 @@ impl Model {
             predictions.push(prediction);
         }
 
-        print!("Loss: {} ", loss / x.len() as f32);
+        print!("Loss: {:.4} ", loss / x.len() as f32);
 
         print_metrics(predictions, &metrics, &y);
         println!()
